@@ -40,7 +40,17 @@ INSTALLED_APPS = [
     'rest_framework',
     'backend',
     'corsheaders',
+    'storages',
 ]
+
+# AWS S3 Settings
+AWS_ACCESS_KEY_ID = 'AKIAS74GIVSGTFT4RBWY'
+AWS_SECRET_ACCESS_KEY = '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'
+AWS_STORAGE_BUCKET_NAME = 'paxphotos'
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+AWS_LOCATION = ''
+AWS_DEFAULT_ACL = 'public-read'  # Ensure this aligns with your security policies
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -86,7 +96,6 @@ DATABASES = {
         'HOST': 'testdb1.chuaaau220ua.us-east-1.rds.amazonaws.com',
         'PORT': '5432',
     }
-
 }
 
 

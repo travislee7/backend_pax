@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User
-from .serializers import UserSerializer
+from .models import User, PlayerUser, PlayerCategories
+from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer
 import boto3
 from django.conf import settings
 import uuid
@@ -16,6 +16,7 @@ from django.db.models import Q
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
+# Coach Signup and signin / upload coach images to aws s3 bucket
 
 class UserCreate(APIView):
     def post(self, request, format=None):
@@ -80,3 +81,66 @@ class UserSignIn(APIView):
             print('hi')
             # If authentication fails, return an error response
             return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+# Player signup and signin
+        
+class PlayerUserCreate(APIView):
+    def post(self, request, format=None):
+        serializer = PlayerUserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PlayerUserSignIn(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        phone_number = request.data.get('phone_number')
+        password = request.data.get('password')
+
+        user = PlayerUser.objects.filter(Q(email=email) | Q(phone_number=phone_number)).first()
+
+        if user and user.password == password:  # Consider using hashed passwords
+            return Response({
+                'message': 'Sign in successful',
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'phone_number': user.phone_number,
+                    # Add other fields as needed
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+# Player categories CRUD operations
+        
+class PlayerCategoriesCreate(APIView):
+    def post(self, request, format=None):
+        serializer = PlayerCategoriesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PlayerCategoriesRead(APIView):
+    def get(self, request, player_id, format=None):
+        categories = PlayerCategories.objects.filter(player_id=player_id)
+        serializer = PlayerCategoriesSerializer(categories, many=True)
+        return Response(serializer.data)
+
+class PlayerCategoriesUpdate(APIView):
+    def patch(self, request, pk, format=None):
+        category = PlayerCategories.objects.get(pk=pk)
+        serializer = PlayerCategoriesSerializer(category, data=request.data, partial=True) # partial=True allows partial update
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PlayerCategoriesDelete(APIView):
+    def delete(self, request, pk, format=None):
+        category = PlayerCategories.objects.get(pk=pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

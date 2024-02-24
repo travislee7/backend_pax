@@ -1,10 +1,12 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesUpdate, PlayerCategoriesDelete
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesUpdate, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
     path('api/signin/', UserSignIn.as_view(), name='user-signin'),  
+    path('api/user/update/<int:pk>/', UserUpdate.as_view(), name='user-update'),
+
 
     path('api/userplayer/', PlayerUserCreate.as_view(), name='playeruser-create'),
     path('api/signinplayer/', PlayerUserSignIn.as_view(), name='playeruser-signin'),
@@ -13,5 +15,9 @@ urlpatterns = [
     path('api/playercategories/read/<int:player_id>/', PlayerCategoriesRead.as_view(), name='playercategories-read'),
     path('api/playercategories/update/<int:pk>/', PlayerCategoriesUpdate.as_view(), name='playercategories-update'),
     path('api/playercategories/delete/<int:pk>/', PlayerCategoriesDelete.as_view(), name='playercategories-delete'), 
+
+    path('api/userprofileread/<int:pk>/', UserProfileRead.as_view(), name='user-profile-read'),  
+    path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
+
 
 ]

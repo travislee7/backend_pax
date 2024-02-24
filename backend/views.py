@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import User, PlayerUser, PlayerCategories
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer
+from rest_framework.generics import UpdateAPIView
 import boto3
 from django.conf import settings
 import uuid
@@ -16,9 +17,9 @@ from django.db.models import Q
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
-# Coach Signup and signin / upload coach images to aws s3 bucket
+# Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
-class UserCreate(APIView):
+'''class UserCreate(APIView):
     def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -53,7 +54,44 @@ class UserCreate(APIView):
 
             user = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+class UserCreate(APIView):
+    def post(self, request, format=None):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            media_files = []
+            for key in ['media1', 'media2', 'media3']:
+                media_file = request.FILES.get(key)
+                if media_file:
+                    # Initialize the boto3 client with the AWS region
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name='us-east-1'
+                    )
+                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
+                    s3_client.upload_fileobj(
+                        media_file,
+                        bucket_name,
+                        unique_file_name,
+                        ExtraArgs={'ACL': settings.AWS_DEFAULT_ACL}
+                    )
+                    media_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
+                    media_files.append(media_url)
+                    serializer.validated_data[key] = media_url
+
+            user = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class UserUpdate(UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    lookup_field = 'pk'  # or 'id'
+    
 
 class UserSignIn(APIView):
     def post(self, request, *args, **kwargs):
@@ -144,3 +182,24 @@ class PlayerCategoriesDelete(APIView):
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+# Coach profile characteristics read given id 
+    
+class UserProfileRead(APIView):
+    def get(self, request, pk, format=None):
+        try:
+            user = User.objects.get(pk=pk)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+# Player profile characteristics read given id 
+
+class PlayerProfileRead(APIView):
+    def get(self, request, pk, format=None):
+        try:
+            user = PlayerUser.objects.get(pk=pk)
+            serializer = PlayerUserSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)

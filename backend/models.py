@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MinLengthValidator
+
 
 class User(models.Model):
     email = models.EmailField(unique=True)
@@ -11,8 +13,7 @@ class User(models.Model):
     media3 = models.CharField(max_length=500, null=True, blank=True)
     location = models.CharField(max_length=100, null=True, blank=True)
     age = models.IntegerField(null=True, blank=True)
-    bio = models.CharField(max_length=1000, null=True, blank=True)  # New bio attribute
-
+    bio = models.CharField(max_length=1000, null=True, blank=True)  
 
     def __str__(self):
         return self.email
@@ -25,15 +26,17 @@ class PlayerUser(models.Model):
     last_name = models.CharField(max_length=30)
     location = models.CharField(max_length=100, null=True, blank=True)
     age = models.IntegerField(null=True, blank=True)
+    photo = models.CharField(max_length=500, null=True, blank=True)  
 
     def __str__(self):
         return self.email
 
-
 class PlayerCategories(models.Model):
     player = models.ForeignKey(PlayerUser, on_delete=models.CASCADE, related_name='player_categories')
     category = models.CharField(max_length=100)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Optional budget field
+    description = models.CharField(max_length=500, null=True, blank=True, validators=[MinLengthValidator(30)])
 
     def __str__(self):
-        return f"Categories for {self.user.email}"
+        return f"Categories for {self.player.email}"
 

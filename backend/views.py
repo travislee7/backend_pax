@@ -122,13 +122,54 @@ class UserSignIn(APIView):
 
 # Player signup and signin
         
-class PlayerUserCreate(APIView):
+'''class PlayerUserCreate(APIView):
     def post(self, request, format=None):
         serializer = PlayerUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import PlayerUser
+from .serializers import PlayerUserSerializer
+import boto3
+from django.conf import settings
+import uuid
+
+class PlayerUserCreate(APIView):
+    def post(self, request, format=None):
+        serializer = PlayerUserSerializer(data=request.data)
+        if serializer.is_valid():
+            # Handle the photo upload to S3
+            photo = request.FILES.get('photo')  # Assuming 'photo' is the field name for the file in the request
+            if photo:
+                # Initialize the boto3 client with the AWS region
+                s3_client = boto3.client(
+                    's3',
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                    region_name='us-east-1'
+                )
+                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
+                # Upload the photo to S3
+                s3_client.upload_fileobj(
+                    photo,
+                    bucket_name,
+                    unique_file_name,
+                    ExtraArgs={'ACL': settings.AWS_DEFAULT_ACL}
+                )
+                media_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
+                # Set the photo URL in validated_data
+                serializer.validated_data['photo_url'] = media_url  # Ensure your model has a 'photo_url' field or similar
+
+            player_user = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class PlayerUserSignIn(APIView):
     def post(self, request, *args, **kwargs):
@@ -167,14 +208,14 @@ class PlayerCategoriesRead(APIView):
         serializer = PlayerCategoriesSerializer(categories, many=True)
         return Response(serializer.data)
 
-class PlayerCategoriesUpdate(APIView):
+'''class PlayerCategoriesUpdate(APIView):
     def patch(self, request, pk, format=None):
         category = PlayerCategories.objects.get(pk=pk)
         serializer = PlayerCategoriesSerializer(category, data=request.data, partial=True) # partial=True allows partial update
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
 class PlayerCategoriesDelete(APIView):
     def delete(self, request, pk, format=None):

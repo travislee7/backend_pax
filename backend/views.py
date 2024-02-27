@@ -164,7 +164,7 @@ class PlayerUserCreate(APIView):
                 )
                 media_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
                 # Set the photo URL in validated_data
-                serializer.validated_data['photo_url'] = media_url  # Ensure your model has a 'photo_url' field or similar
+                serializer.validated_data['photo'] = media_url  # Ensure your model has a 'photo_url' field or similar
 
             player_user = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

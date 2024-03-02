@@ -4,7 +4,7 @@ from .models import User, PlayerUser, PlayerCategories
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'phone_number', 'password', 'first_name', 'last_name', 'media1', 'media2', 'media3', 'location', 'age', 'bio']
+        fields = ['id', 'email', 'phone_number', 'password', 'first_name', 'last_name', 'media1', 'media2', 'media3', 'location', 'age', 'bio', 'coach_category']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -36,7 +36,15 @@ class PlayerUserSerializer(serializers.ModelSerializer):
         return player_user
     
 class PlayerCategoriesSerializer(serializers.ModelSerializer):
+    matched_coaches = serializers.SerializerMethodField()
+
     class Meta:
         model = PlayerCategories
-        fields = '__all__'
-
+        fields = ['id', 'player', 'category', 'budget', 'description', 'matched_coaches']
+        #fields = '__all__'
+    
+    def get_matched_coaches(self, obj):
+        # Filter User instances where 'coach_category' matches 'obj.category'
+        matched_coaches = User.objects.filter(coach_category=obj.category)
+        # You might want to use a simplified User serializer here
+        return UserSerializer(matched_coaches, many=True).data

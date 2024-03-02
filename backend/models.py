@@ -14,6 +14,7 @@ class User(models.Model):
     location = models.CharField(max_length=100, null=True, blank=True)
     age = models.IntegerField(null=True, blank=True)
     bio = models.CharField(max_length=1000, null=True, blank=True)  
+    coach_category = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return self.email

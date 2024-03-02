@@ -61,7 +61,7 @@ import logging
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
-class UserCreate(APIView):
+'''class UserCreate(APIView):
     def post(self, request, format=None):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -90,7 +90,44 @@ class UserCreate(APIView):
 
             user = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+class UserCreate(APIView):
+    def post(self, request, format=None):
+        data = request.data
+
+        try:
+            media_files = []
+            for key in ['media1', 'media2', 'media3']:
+                media_file = request.FILES.get(key)
+                if media_file:
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name='us-east-1'
+                    )
+                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
+                    s3_client.upload_fileobj(
+                        media_file,  # Ensure this is a file-like object
+                        bucket_name,
+                        unique_file_name,
+                        ExtraArgs={'ACL': 'public-read'}
+                    )
+                    media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                    # Update the request data with the media URL
+                    request.data['media1'] = media_url
+        except Exception as e:
+            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
+            return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class UserUpdate(UpdateAPIView):
     queryset = User.objects.all()
@@ -203,15 +240,6 @@ class PlayerCategoriesRead(APIView):
         categories = PlayerCategories.objects.filter(player_id=player_id)
         serializer = PlayerCategoriesSerializer(categories, many=True)
         return Response(serializer.data)
-
-'''class PlayerCategoriesUpdate(APIView):
-    def patch(self, request, pk, format=None):
-        category = PlayerCategories.objects.get(pk=pk)
-        serializer = PlayerCategoriesSerializer(category, data=request.data, partial=True) # partial=True allows partial update
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
 class PlayerCategoriesDelete(APIView):
     def delete(self, request, pk, format=None):

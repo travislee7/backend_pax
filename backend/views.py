@@ -4,10 +4,15 @@ from rest_framework import status
 from .models import User, PlayerUser, PlayerCategories
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer
 from rest_framework.generics import UpdateAPIView
+from rest_framework.parsers import MultiPartParser, FormParser
 import boto3
 from django.conf import settings
 import uuid
 from django.db.models import Q
+import base64
+from django.http import QueryDict
+import logging
+
 
 '''class UserCreate(APIView):
     def post(self, request, format=None):
@@ -122,31 +127,16 @@ class UserSignIn(APIView):
 
 # Player signup and signin
         
-'''class PlayerUserCreate(APIView):
-    def post(self, request, format=None):
-        serializer = PlayerUserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import PlayerUser
-from .serializers import PlayerUserSerializer
-import boto3
-from django.conf import settings
-import uuid
+logger = logging.getLogger(__name__)
 
 class PlayerUserCreate(APIView):
     def post(self, request, format=None):
-        serializer = PlayerUserSerializer(data=request.data)
-        if serializer.is_valid():
-            # Handle the photo upload to S3
-            photo = request.FILES.get('photo')  # Assuming 'photo' is the field name for the file in the request
+        # Initialize data variable from request.data
+        data = request.data
+
+        try:
+            photo = request.FILES.get('photo')
             if photo:
-                # Initialize the boto3 client with the AWS region
                 s3_client = boto3.client(
                     's3',
                     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -155,21 +145,27 @@ class PlayerUserCreate(APIView):
                 )
                 bucket_name = settings.AWS_STORAGE_BUCKET_NAME
                 unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
-                # Upload the photo to S3
+                # You may need to read the file before uploading
                 s3_client.upload_fileobj(
-                    photo,
+                    photo,  # Make sure this is a file-like object
                     bucket_name,
                     unique_file_name,
-                    ExtraArgs={'ACL': settings.AWS_DEFAULT_ACL}
+                    ExtraArgs={'ACL': 'public-read'}
                 )
-                media_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
-                # Set the photo URL in validated_data
-                serializer.validated_data['photo'] = media_url  # Ensure your model has a 'photo_url' field or similar
+                media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                # Use request.data directly to avoid immutability issues
+                request.data['photo'] = media_url
+        except Exception as e:
+            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
+            return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            player_user = serializer.save()
+        # Proceed with serialization and saving
+        serializer = PlayerUserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PlayerUserSignIn(APIView):
     def post(self, request, *args, **kwargs):

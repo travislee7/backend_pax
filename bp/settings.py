@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-%y@iwnu*(1q0w8qdzdo3x_$tjg4e%*9!88^$#z16@a%%&(o2p!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137']
+ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', '.elasticbeanstalk.com']
 
 
 # Application definition
@@ -44,8 +44,8 @@ INSTALLED_APPS = [
 ]
 
 # AWS S3 Settings
-AWS_ACCESS_KEY_ID = 'AKIAS74GIVSGTFT4RBWY'
-AWS_SECRET_ACCESS_KEY = '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'
+AWS_ACCESS_KEY_ID = 'AKIAS74GIVSG4OQA4VXW'
+AWS_SECRET_ACCESS_KEY = '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'
 AWS_STORAGE_BUCKET_NAME = 'paxphotos'
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}

@@ -19,5 +19,4 @@ urlpatterns = [
     path('api/userprofileread/<int:pk>/', UserProfileRead.as_view(), name='user-profile-read'),  
     path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
 
-
 ]

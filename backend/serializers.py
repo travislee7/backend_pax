@@ -45,6 +45,34 @@ class PlayerCategoriesSerializer(serializers.ModelSerializer):
     
     def get_matched_coaches(self, obj):
         # Filter User instances where 'coach_category' matches 'obj.category'
-        matched_coaches = User.objects.filter(coach_category=obj.category)
+        #matched_coaches = User.objects.filter(coach_category=obj.category)
+        
+        matched_coaches = User.objects.filter(coach_category__icontains=obj.category)
+
         # You might want to use a simplified User serializer here
         return UserSerializer(matched_coaches, many=True).data
+    
+class SimplifiedPlayerUserSerializer(serializers.ModelSerializer):
+    """
+    A simplified version of PlayerUserSerializer to be used for nested serialization
+    within PlayerCategoriesWithPlayerSerializer to avoid exposing sensitive fields like password.
+    """
+    class Meta:
+        model = PlayerUser
+        fields = ['id', 'email', 'phone_number', 'first_name', 'last_name', 'location', 'age', 'photo']
+
+class PlayerCategoriesWithPlayerSerializer(serializers.ModelSerializer):
+    matched_players = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlayerCategories
+        fields = ['id', 'category', 'budget', 'description', 'matched_players']
+
+    def get_matched_players(self, obj):
+        """
+        Dynamically add the PlayerUser data associated with the PlayerCategory instance.
+        This method is designed to include player data, enhancing the detail provided for each player category.
+        """
+        # Directly return the associated PlayerUser data using the SimplifiedPlayerUserSerializer
+        return SimplifiedPlayerUserSerializer(obj.player).data
+

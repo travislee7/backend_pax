@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User, PlayerUser, PlayerCategories
-from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer
+from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 import boto3
@@ -12,85 +12,11 @@ from django.db.models import Q
 import base64
 from django.http import QueryDict
 import logging
+from django.shortcuts import get_object_or_404
 
 
-'''class UserCreate(APIView):
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
-
-'''class UserCreate(APIView):
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            photo = request.FILES.get('photo')
-            if photo:
-                # Initialize the boto3 client with the AWS region
-                s3_client = boto3.client(
-                    's3',
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                    region_name='us-east-1'  # Ensure this is set to your bucket's region
-                )
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-
-                # Generate a unique file name for the photo to avoid name collisions
-                unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
-
-                # Upload the photo to S3
-                s3_client.upload_fileobj(
-                    photo,
-                    bucket_name,
-                    unique_file_name,
-                    ExtraArgs={'ACL': settings.AWS_DEFAULT_ACL}  # Use the ACL from your settings
-                )
-
-                # Construct the URL of the uploaded file
-                # Note: Adjust the URL pattern if your bucket is in a region that requires a different URL format
-                photo_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
-
-                # Update the serializer data with the photo URL
-                serializer.validated_data['photo'] = photo_url
-
-            user = serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
-
-'''class UserCreate(APIView):
-    def post(self, request, format=None):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            media_files = []
-            for key in ['media1', 'media2', 'media3']:
-                media_file = request.FILES.get(key)
-                if media_file:
-                    # Initialize the boto3 client with the AWS region
-                    s3_client = boto3.client(
-                        's3',
-                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                        region_name='us-east-1'
-                    )
-                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
-                    s3_client.upload_fileobj(
-                        media_file,
-                        bucket_name,
-                        unique_file_name,
-                        ExtraArgs={'ACL': settings.AWS_DEFAULT_ACL}
-                    )
-                    media_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{unique_file_name}"
-                    media_files.append(media_url)
-                    serializer.validated_data[key] = media_url
-
-            user = serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
 
 class UserCreate(APIView):
     def post(self, request, format=None):
@@ -129,10 +55,21 @@ class UserCreate(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class UserUpdate(UpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    lookup_field = 'pk'  # or 'id'
+
+class UserUpdate(APIView):
+    def patch(self, request, pk, format=None):
+        # Retrieve the user instance
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Update the user instance
+        serializer = UserSerializer(user, data=request.data, partial=True)  # `partial=True` allows for partial updates
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 class UserSignIn(APIView):
@@ -235,6 +172,8 @@ class PlayerCategoriesCreate(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+# Matching algorithm for player view
+    
 class PlayerCategoriesRead(APIView):
     def get(self, request, player_id, format=None):
         categories = PlayerCategories.objects.filter(player_id=player_id)
@@ -246,6 +185,35 @@ class PlayerCategoriesDelete(APIView):
         category = PlayerCategories.objects.get(pk=pk)
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+#Matching algorithm for coach view
+
+class MatchedPlayerCategoriesView(APIView):
+    def get(self, request, user_id):
+        # Fetch the User instance
+        user = get_object_or_404(User, pk=user_id)
+        
+        # Split the coach_category string into a list on commas
+        coach_categories = user.coach_category.split(',')
+        print(coach_categories)
+        
+        # Initialize an empty list to hold matched PlayerCategory instances
+        matched_categories = []
+        
+        # Iterate through each element of coach_categories
+        for category in coach_categories:
+            # Strip to ensure no leading/trailing whitespace, if any
+            category = category.strip()
+            # Filter PlayerCategory instances for the current category
+            # and extend the matched_categories list with the results
+            current_matches = PlayerCategories.objects.filter(category=category)
+            matched_categories.extend(current_matches)
+        
+        # Serialize the matched PlayerCategory instances
+        serializer = PlayerCategoriesWithPlayerSerializer(matched_categories, many=True)
+        
+        # Return the serialized data
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Coach profile characteristics read given id 
     

@@ -55,9 +55,37 @@ class UserCreate(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
-class UserUpdate(APIView):
+class UserSignIn(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email', None)
+        phone_number = request.data.get('phone_number', None)
+        password = request.data.get('password', None)
+
+        print("Request data:", request.data)
+
+        # Attempt to retrieve a user by email or phone number
+        user = User.objects.filter(Q(email=email) | Q(phone_number=phone_number)).first()
+
+        if user and user.password == password:
+            # If credentials are valid, return success response
+            return Response({
+                'message': 'Sign in successful',
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'phone_number': user.phone_number,
+                    # Include any other fields you want to return
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            print('hi')
+            # If authentication fails, return an error response
+            return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+#Coach update profile
+        
+'''class UserUpdate(APIView):
     def patch(self, request, pk, format=None):
         user = get_object_or_404(User, pk=pk)
         data = request.data
@@ -91,35 +119,50 @@ class UserUpdate(APIView):
             serializer.save()
             return Response(serializer.data)
         else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+class UserUpdate(APIView):
+    def patch(self, request, pk, format=None):
+        user = get_object_or_404(User, pk=pk)
+        data = request.data
+        try:
+            for key in ['media1', 'media2', 'media3']:
+                media_file = request.FILES.get(key)
+                if media_file:
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name='us-east-1'
+                    )
+                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                    # Delete the old file from S3 if it exists
+                    old_media_url = getattr(user, key)  # Assuming the model has media1, media2, media3 fields with URLs
+                    if old_media_url:
+                        old_file_key = old_media_url.replace(f"https://{bucket_name}.s3.amazonaws.com/", "")
+                        s3_client.delete_object(Bucket=bucket_name, Key=old_file_key)
+
+                    # Upload new file
+                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
+                    s3_client.upload_fileobj(
+                        media_file,
+                        bucket_name,
+                        unique_file_name,
+                        ExtraArgs={'ACL': 'public-read'}
+                    )
+                    media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                    request.data[key] = media_url  # Update the data dict with the new media URL
+        except Exception as e:
+            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
+            return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = UserSerializer(user, data=request.data, partial=True)  # Use the updated data with new media URLs
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
-class UserSignIn(APIView):
-    def post(self, request, *args, **kwargs):
-        email = request.data.get('email', None)
-        phone_number = request.data.get('phone_number', None)
-        password = request.data.get('password', None)
-
-        print("Request data:", request.data)
-
-        # Attempt to retrieve a user by email or phone number
-        user = User.objects.filter(Q(email=email) | Q(phone_number=phone_number)).first()
-
-        if user and user.password == password:
-            # If credentials are valid, return success response
-            return Response({
-                'message': 'Sign in successful',
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'phone_number': user.phone_number,
-                    # Include any other fields you want to return
-                }
-            }, status=status.HTTP_200_OK)
-        else:
-            print('hi')
-            # If authentication fails, return an error response
-            return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 # Player signup and signin
         
@@ -184,6 +227,93 @@ class PlayerUserSignIn(APIView):
         else:
             return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
+# Player update profile
+        
+'''class PlayerUserUpdate(APIView):
+    def patch(self, request, pk, format=None):
+        player_user = get_object_or_404(PlayerUser, pk=pk)
+        data = request.data
+
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name='us-east-1'
+        )
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+        try:
+            photo = request.FILES.get('photo')
+            if photo:
+                # Delete the old photo from S3 if it exists
+                old_photo_url = player_user.photo
+                if old_photo_url:
+                    old_file_key = old_photo_url.replace(f"https://{bucket_name}.s3.amazonaws.com/", "")
+                    s3_client.delete_object(Bucket=bucket_name, Key=old_file_key)
+
+                # Upload new photo
+                unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
+                s3_client.upload_fileobj(
+                    photo,
+                    bucket_name,
+                    unique_file_name,
+                    ExtraArgs={'ACL': 'public-read'}
+                )
+                media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                request.data['photo'] = media_url  # Update the data dict with the new photo URL
+        except Exception as e:
+            logger.error(f"Failed to upload photo to S3: {e}", exc_info=True)
+            return Response({"error": "Failed to upload photo to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = PlayerUserSerializer(player_user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+class PlayerUserUpdate(APIView):
+    def patch(self, request, pk, format=None):
+        player_user = get_object_or_404(PlayerUser, pk=pk)
+        
+        # Create a mutable copy of request.data
+        data = request.data
+        photo = request.FILES.get('photo')
+        if photo:
+            try:
+                s3_client = boto3.client('s3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name='us-east-1')
+                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                # Delete the old photo from S3 if it exists
+                old_photo_url = player_user.photo
+                if old_photo_url:
+                    old_file_key = old_photo_url.replace(f"https://{bucket_name}.s3.amazonaws.com/", "")
+                    s3_client.delete_object(Bucket=bucket_name, Key=old_file_key)
+
+                # Upload new photo
+                unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
+                s3_client.upload_fileobj(
+                    photo,
+                    bucket_name,
+                    unique_file_name,
+                    ExtraArgs={'ACL': 'public-read'}
+                )
+                media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                request.data['photo'] = media_url  # Update the mutable copy with the new photo URL
+            except Exception as e:
+                logger.error(f"Failed to upload photo to S3: {e}", exc_info=True)
+                return Response({"error": "Failed to upload photo to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Use the updated data for serialization
+        serializer = PlayerUserSerializer(player_user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 # Player categories CRUD operations
         
 class PlayerCategoriesCreate(APIView):

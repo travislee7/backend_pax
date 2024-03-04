@@ -43,7 +43,8 @@ class UserCreate(APIView):
                     )
                     media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
                     # Update the request data with the media URL
-                    request.data['media1'] = media_url
+                    #request.data['media1'] = media_url
+                    request.data[key] = media_url
         except Exception as e:
             logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
             return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -58,18 +59,39 @@ class UserCreate(APIView):
 
 class UserUpdate(APIView):
     def patch(self, request, pk, format=None):
-        # Retrieve the user instance
-        try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        user = get_object_or_404(User, pk=pk)
+        data = request.data
 
-        # Update the user instance
-        serializer = UserSerializer(user, data=request.data, partial=True)  # `partial=True` allows for partial updates
+        try:
+            for key in ['media1', 'media2', 'media3']:
+                media_file = request.FILES.get(key)
+                if media_file:
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name='us-east-1'
+                    )
+                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
+                    s3_client.upload_fileobj(
+                        media_file,
+                        bucket_name,
+                        unique_file_name,
+                        ExtraArgs={'ACL': 'public-read'}
+                    )
+                    media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+                    request.data[key] = media_url  # Update the data dict with the new media URL
+        except Exception as e:
+            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
+            return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = UserSerializer(user, data=request.data, partial=True)  # Now using the updated data with new media URLs
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 class UserSignIn(APIView):

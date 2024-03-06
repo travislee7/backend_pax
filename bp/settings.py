@@ -52,6 +52,13 @@ AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 AWS_LOCATION = ''
 AWS_DEFAULT_ACL = 'public-read'  # Ensure this aligns with your security policies
 
+TWILIO_ACCOUNT_SID = 'AC5fb0766880f6ceb0e516e1a5d9191246'
+TWILIO_AUTH_TOKEN = '13dc07e7dd0bbdece5c4a03c21b16632'
+TWILIO_API_KEY = 'SKeb4a43898c8344481957c16d9713ac70'
+TWILIO_API_SECRET = 'mPLK3APeqvxMFxxn7M2gWQ2CPMK1JLfv'
+TWILIO_CHAT_SERVICE_SID = 'IS15b7c890ffc640e2abf1cf80e74e6329'
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -10,9 +10,12 @@ from django.conf import settings
 import uuid
 from django.db.models import Q
 import base64
-from django.http import QueryDict
+from django.http import QueryDict, JsonResponse
 import logging
 from django.shortcuts import get_object_or_404
+from twilio.jwt.access_token import AccessToken
+from twilio.jwt.access_token.grants import VideoGrant, ChatGrant
+
 
 
 
@@ -85,42 +88,6 @@ class UserSignIn(APIView):
         
 #Coach update profile
         
-'''class UserUpdate(APIView):
-    def patch(self, request, pk, format=None):
-        user = get_object_or_404(User, pk=pk)
-        data = request.data
-
-        try:
-            for key in ['media1', 'media2', 'media3']:
-                media_file = request.FILES.get(key)
-                if media_file:
-                    s3_client = boto3.client(
-                        's3',
-                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                        region_name='us-east-1'
-                    )
-                    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                    unique_file_name = f"uploads/{uuid.uuid4()}_{media_file.name}"
-                    s3_client.upload_fileobj(
-                        media_file,
-                        bucket_name,
-                        unique_file_name,
-                        ExtraArgs={'ACL': 'public-read'}
-                    )
-                    media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
-                    request.data[key] = media_url  # Update the data dict with the new media URL
-        except Exception as e:
-            logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
-            return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        serializer = UserSerializer(user, data=request.data, partial=True)  # Now using the updated data with new media URLs
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
-
 class UserUpdate(APIView):
     def patch(self, request, pk, format=None):
         user = get_object_or_404(User, pk=pk)
@@ -229,49 +196,6 @@ class PlayerUserSignIn(APIView):
         
 # Player update profile
         
-'''class PlayerUserUpdate(APIView):
-    def patch(self, request, pk, format=None):
-        player_user = get_object_or_404(PlayerUser, pk=pk)
-        data = request.data
-
-        s3_client = boto3.client(
-            's3',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name='us-east-1'
-        )
-        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-
-        try:
-            photo = request.FILES.get('photo')
-            if photo:
-                # Delete the old photo from S3 if it exists
-                old_photo_url = player_user.photo
-                if old_photo_url:
-                    old_file_key = old_photo_url.replace(f"https://{bucket_name}.s3.amazonaws.com/", "")
-                    s3_client.delete_object(Bucket=bucket_name, Key=old_file_key)
-
-                # Upload new photo
-                unique_file_name = f"uploads/{uuid.uuid4()}_{photo.name}"
-                s3_client.upload_fileobj(
-                    photo,
-                    bucket_name,
-                    unique_file_name,
-                    ExtraArgs={'ACL': 'public-read'}
-                )
-                media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
-                request.data['photo'] = media_url  # Update the data dict with the new photo URL
-        except Exception as e:
-            logger.error(f"Failed to upload photo to S3: {e}", exc_info=True)
-            return Response({"error": "Failed to upload photo to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        serializer = PlayerUserSerializer(player_user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
-
 class PlayerUserUpdate(APIView):
     def patch(self, request, pk, format=None):
         player_user = get_object_or_404(PlayerUser, pk=pk)
@@ -388,3 +312,27 @@ class PlayerProfileRead(APIView):
             return Response(serializer.data)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+#Twilio 
+        
+def generate_token(request, id):
+    # Get credentials from settings
+    account_sid = settings.TWILIO_ACCOUNT_SID
+    api_key = settings.TWILIO_API_KEY
+    api_secret = settings.TWILIO_API_SECRET
+    service_sid = settings.TWILIO_CHAT_SERVICE_SID 
+    
+    # Set up the user identity (could be any unique identifier)
+    identity = str(id)  # Convert to string if not already
+    
+    # Create access token with credentials
+    token = AccessToken(account_sid, api_key, api_secret, identity=identity)
+    
+    chat_grant = ChatGrant(service_sid=service_sid)
+    token.add_grant(chat_grant)
+    video_grant = VideoGrant()
+    token.add_grant(video_grant)
+    
+    # Return token as a response
+    return JsonResponse({'token': token.to_jwt()})
+

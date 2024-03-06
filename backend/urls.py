@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -22,5 +22,7 @@ urlpatterns = [
 
     path('api/userprofileread/<int:pk>/', UserProfileRead.as_view(), name='user-profile-read'),  
     path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
+
+    path('generate-token/<int:id>/', generate_token, name='generate-token'),
 
 ]

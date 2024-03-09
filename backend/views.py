@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories
-from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer
+from .models import User, PlayerUser, PlayerCategories, Review
+from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 import boto3
@@ -15,9 +15,6 @@ import logging
 from django.shortcuts import get_object_or_404
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VideoGrant, ChatGrant
-
-
-
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -336,3 +333,18 @@ def generate_token(request, id):
     # Return token as a response
     return JsonResponse({'token': token.to_jwt()})
 
+# Create reviews, and show reviews on Coach Profile page
+
+class CreateReview(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ReadReviews(APIView):
+    def get(self, request, user_id, format=None):
+        reviews = Review.objects.filter(user=user_id)
+        serializer = ReviewReadSerializer(reviews, many=True)
+        return Response(serializer.data)

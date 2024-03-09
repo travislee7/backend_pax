@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, PlayerUser, PlayerCategories
+from .models import User, PlayerUser, PlayerCategories, Review
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,7 +41,6 @@ class PlayerCategoriesSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlayerCategories
         fields = ['id', 'player', 'category', 'budget', 'description', 'matched_coaches']
-        #fields = '__all__'
     
     def get_matched_coaches(self, obj):
         # Filter User instances where 'coach_category' matches 'obj.category'
@@ -76,3 +75,17 @@ class PlayerCategoriesWithPlayerSerializer(serializers.ModelSerializer):
         # Directly return the associated PlayerUser data using the SimplifiedPlayerUserSerializer
         return SimplifiedPlayerUserSerializer(obj.player).data
 
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'playeruser', 'user', 'rating', 'description']
+
+
+class ReviewReadSerializer(serializers.ModelSerializer):
+    playeruser_details = SimplifiedPlayerUserSerializer(source='playeruser', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ['id', 'playeruser', 'user', 'rating', 'description', 'playeruser_details']
+    
+    

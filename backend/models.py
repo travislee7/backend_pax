@@ -18,7 +18,6 @@ class User(models.Model):
     coach_category = models.CharField(max_length=100, null=True, blank=True)
     #coach_category = ArrayField(models.CharField(max_length=100), blank=True, null=True)
 
-
     def __str__(self):
         return self.email
 
@@ -43,4 +42,12 @@ class PlayerCategories(models.Model):
 
     def __str__(self):
         return f"Categories for {self.player.email}"
+    
+class Review(models.Model):
+    playeruser = models.ForeignKey(PlayerUser, on_delete=models.CASCADE, related_name='reviews_as_player')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_as_user')
+    rating = models.IntegerField(null=True, blank=True)  # Adjust max_digits as needed
+    description = models.TextField()
 
+    def __str__(self):
+        return f"Review by {self.user.email} for {self.playeruser.email} - Rating: {self.rating}"

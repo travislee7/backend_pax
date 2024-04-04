@@ -310,7 +310,7 @@ class PlayerProfileRead(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
-#Twilio 
+'''#Twilio 
         
 def generate_token(request, id):
     # Get credentials from settings
@@ -331,7 +331,7 @@ def generate_token(request, id):
     token.add_grant(video_grant)
     
     # Return token as a response
-    return JsonResponse({'token': token.to_jwt()})
+    return JsonResponse({'token': token.to_jwt()})'''
 
 # Create reviews, and show reviews on Coach Profile page
 

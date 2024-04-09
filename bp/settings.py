@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%y@iwnu*(1q0w8qdzdo3x_$tjg4e%*9!88^$#z16@a%%&(o2p!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', '.elasticbeanstalk.com']
+ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', '.elasticbeanstalk.com', '10.0.0.165']
 
 
 # Application definition
@@ -43,6 +43,13 @@ INSTALLED_APPS = [
     'storages',
 ]
 
+# Twilio Credentials
+TWILIO_ACCOUNT_SID = 'AC5fb0766880f6ceb0e516e1a5d9191246'
+TWILIO_AUTH_TOKEN = '13dc07e7dd0bbdece5c4a03c21b16632'
+TWILIO_API_KEY = 'SKeb4a43898c8344481957c16d9713ac70'
+TWILIO_API_KEY_SECRET = 'mPLK3APeqvxMFxxn7M2gWQ2CPMK1JLfv'
+TWILIO_CHAT_SERVICE_SID = 'IS15b7c890ffc640e2abf1cf80e74e6329'
+
 # AWS S3 Settings
 AWS_ACCESS_KEY_ID = 'AKIAS74GIVSG4OQA4VXW'
 AWS_SECRET_ACCESS_KEY = '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'
@@ -51,13 +58,6 @@ AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 AWS_LOCATION = ''
 AWS_DEFAULT_ACL = 'public-read'  # Ensure this aligns with your security policies
-
-TWILIO_ACCOUNT_SID = 'AC5fb0766880f6ceb0e516e1a5d9191246'
-TWILIO_AUTH_TOKEN = '13dc07e7dd0bbdece5c4a03c21b16632'
-TWILIO_API_KEY = 'SKeb4a43898c8344481957c16d9713ac70'
-TWILIO_API_SECRET = 'mPLK3APeqvxMFxxn7M2gWQ2CPMK1JLfv'
-TWILIO_CHAT_SERVICE_SID = 'IS15b7c890ffc640e2abf1cf80e74e6329'
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -148,3 +148,32 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Customize the logger for your specific app if needed
+        'backend': {
+            'handlers': ['console'],
+            'level': 'DEBUG', # Use DEBUG or INFO as needed
+            'propagate': False,
+        },
+    },
+}

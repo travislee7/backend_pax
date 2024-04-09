@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, CreateReview, ReadReviews
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token 
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),

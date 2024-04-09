@@ -14,7 +14,7 @@ from django.http import QueryDict, JsonResponse
 import logging
 from django.shortcuts import get_object_or_404
 from twilio.jwt.access_token import AccessToken
-from twilio.jwt.access_token.grants import VideoGrant, ChatGrant
+from twilio.jwt.access_token.grants import ChatGrant
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -79,7 +79,6 @@ class UserSignIn(APIView):
                 }
             }, status=status.HTTP_200_OK)
         else:
-            print('hi')
             # If authentication fails, return an error response
             return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -310,28 +309,71 @@ class PlayerProfileRead(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
-'''#Twilio 
+#Twilio 
         
+'''def generate_token(request, user_id):
+    try:
+        # Twilio Account Sid and Auth Token from twilio.com/console
+        account_sid = settings.TWILIO_ACCOUNT_SID
+        auth_token = settings.TWILIO_AUTH_TOKEN
+        # Twilio API Key and Secret
+        api_key = settings.TWILIO_API_KEY
+        api_secret = settings.TWILIO_API_SECRET
+        service_sid = settings.TWILIO_CHAT_SERVICE_SID
+
+        # Create an Access Token
+        token = AccessToken(account_sid, api_key, api_secret, identity=str(user_id))
+
+        # Create a Chat grant and add to token
+        chat_grant = ChatGrant(service_sid=service_sid)
+        token.add_grant(chat_grant)
+
+        # Serialize the token as a JWT
+        jwt_token = token.to_jwt()
+
+        return JsonResponse({'access_token': jwt_token.decode('utf-8')})
+    except Exception as e:
+        logger.error(f"Error generating token: {str(e)}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)'''
+
 def generate_token(request, id):
-    # Get credentials from settings
-    account_sid = settings.TWILIO_ACCOUNT_SID
-    api_key = settings.TWILIO_API_KEY
-    api_secret = settings.TWILIO_API_SECRET
-    service_sid = settings.TWILIO_CHAT_SERVICE_SID 
-    
-    # Set up the user identity (could be any unique identifier)
-    identity = str(id)  # Convert to string if not already
-    
-    # Create access token with credentials
-    token = AccessToken(account_sid, api_key, api_secret, identity=identity)
-    
-    chat_grant = ChatGrant(service_sid=service_sid)
-    token.add_grant(chat_grant)
-    video_grant = VideoGrant()
-    token.add_grant(video_grant)
-    
-    # Return token as a response
-    return JsonResponse({'token': token.to_jwt()})'''
+    try:
+        logger.info("Starting token generation process")
+
+        account_sid = settings.TWILIO_ACCOUNT_SID
+        logger.info(f"Using Account SID: {account_sid}")
+        
+        api_key = settings.TWILIO_API_KEY
+        api_secret = settings.TWILIO_API_KEY_SECRET
+        logger.info("API Key and Secret retrieved")
+
+        # Required for Chat grants
+        service_sid = settings.TWILIO_CHAT_SERVICE_SID
+        identity = str(id)
+        logger.info(f"Service SID: {service_sid}, Identity: {identity}")
+
+        # Log before creating the token
+        logger.info("Creating access token")
+
+        token = AccessToken(account_sid, api_key, api_secret, identity=identity)
+
+        # Log after token creation
+        logger.info("Access token created successfully")
+
+        # Create a Chat grant and add to token
+        chat_grant = ChatGrant(service_sid=service_sid)
+        token.add_grant(chat_grant)
+
+        logger.info("Chat grant added to token")
+
+        jwt_token = token.to_jwt()
+
+        logger.info("JWT token generated successfully")
+
+        return JsonResponse({'access_token': jwt_token})
+    except Exception as e:
+        logger.error(f"Error generating token: {str(e)}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)
 
 # Create reviews, and show reviews on Coach Profile page
 

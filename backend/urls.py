@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token 
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation 
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -23,9 +23,10 @@ urlpatterns = [
     path('api/userprofileread/<int:pk>/', UserProfileRead.as_view(), name='user-profile-read'),  
     path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
 
-    path('generate-token/<int:id>/', generate_token, name='generate-token'),
-
     path('api/reviews/', CreateReview.as_view(), name='create-review'),
     path('api/reviews/<int:user_id>/', ReadReviews.as_view(), name='user-reviews'),
+
+    path('generate-token/<int:id>/', generate_token, name='generate-token'),
+    path('initiate-conversation/', initiateOrFetchConversation, name='initiate-conversation'),
 
 ]

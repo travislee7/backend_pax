@@ -51,3 +51,12 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review by {self.user.email} for {self.playeruser.email} - Rating: {self.rating}"
+
+#Twilio
+class Conversation(models.Model):
+    player_id = models.CharField(max_length=255)
+    coach_id = models.CharField(max_length=255)
+    conversation_sid = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.player_id} <-> {self.coach_id}"

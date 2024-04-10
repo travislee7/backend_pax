@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review
+from .models import User, PlayerUser, PlayerCategories, Review, Conversation
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -12,9 +12,13 @@ from django.db.models import Q
 import base64
 from django.http import QueryDict, JsonResponse
 import logging
+import json
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import ChatGrant
+from twilio.rest import Client
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -308,34 +312,25 @@ class PlayerProfileRead(APIView):
             return Response(serializer.data)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+# Create reviews, and show reviews on Coach Profile page
+
+class CreateReview(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ReadReviews(APIView):
+    def get(self, request, user_id, format=None):
+        reviews = Review.objects.filter(user=user_id)
+        serializer = ReviewReadSerializer(reviews, many=True)
+        return Response(serializer.data)
+
 #Twilio 
         
-'''def generate_token(request, user_id):
-    try:
-        # Twilio Account Sid and Auth Token from twilio.com/console
-        account_sid = settings.TWILIO_ACCOUNT_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
-        # Twilio API Key and Secret
-        api_key = settings.TWILIO_API_KEY
-        api_secret = settings.TWILIO_API_SECRET
-        service_sid = settings.TWILIO_CHAT_SERVICE_SID
-
-        # Create an Access Token
-        token = AccessToken(account_sid, api_key, api_secret, identity=str(user_id))
-
-        # Create a Chat grant and add to token
-        chat_grant = ChatGrant(service_sid=service_sid)
-        token.add_grant(chat_grant)
-
-        # Serialize the token as a JWT
-        jwt_token = token.to_jwt()
-
-        return JsonResponse({'access_token': jwt_token.decode('utf-8')})
-    except Exception as e:
-        logger.error(f"Error generating token: {str(e)}")
-        return JsonResponse({'error': 'Internal server error'}, status=500)'''
-
 def generate_token(request, id):
     try:
         logger.info("Starting token generation process")
@@ -375,18 +370,69 @@ def generate_token(request, id):
         logger.error(f"Error generating token: {str(e)}")
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
-# Create reviews, and show reviews on Coach Profile page
+@csrf_exempt
+@require_http_methods(["POST"])    
+def initiateOrFetchConversation(request):
+    try:
+        # Extract user IDs from the request
+        data = json.loads(request.body)
+        player_id = data.get('userID')
+        coach_id = data.get('match_id')
 
-class CreateReview(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = ReviewSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class ReadReviews(APIView):
-    def get(self, request, user_id, format=None):
-        reviews = Review.objects.filter(user=user_id)
-        serializer = ReviewReadSerializer(reviews, many=True)
-        return Response(serializer.data)
+        # Fetch users from the database
+        #player = PlayerUser.objects.get(id=player_id)
+        #coach = User.objects.get(id=coach_id)
+
+        # Construct Twilio identities using the specified naming convention
+        player_identity = f"{player_id}_player"
+        coach_identity = f"{coach_id}_coach"
+
+        # Check if a conversation between the player and coach already exists
+        existing_conversation = Conversation.objects.filter(
+            player_id=player_identity, 
+            coach_id=coach_identity
+        ).first()
+
+        # If the conversation exists, return its SID
+        if existing_conversation:
+            logger.info('retrieving convo')
+            return JsonResponse({'conversationSid': existing_conversation.conversation_sid})
+
+        # Initialize Twilio client
+        account_sid = settings.TWILIO_ACCOUNT_SID
+        auth_token = settings.TWILIO_AUTH_TOKEN
+        client = Client(account_sid, auth_token)
+
+        # Create a new conversation
+        conversation = client.conversations \
+                             .v1 \
+                             .conversations \
+                             .create(friendly_name='Friendly Conversation')
+        
+        # Add both users as participants (example uses the user's phone number as identity)
+        client.conversations \
+              .v1 \
+              .conversations(conversation.sid) \
+              .participants \
+              .create(identity=coach_identity)  # Adjust attribute as necessary
+
+        client.conversations \
+              .v1 \
+              .conversations(conversation.sid) \
+              .participants \
+              .create(identity=player_identity)  # Adjust attribute as necessary
+
+        
+        Conversation.objects.create(
+            player_id=player_identity,
+            coach_id=coach_identity,
+            conversation_sid=conversation.sid
+        )
+
+        logger.info('new convo')
+        # Return the conversation SID to the frontend
+        return JsonResponse({'conversationSid': conversation.sid})
+
+    except Exception as e:
+        # Handle errors
+        return JsonResponse({'error': str(e)}, status=500)

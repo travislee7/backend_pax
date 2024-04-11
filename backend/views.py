@@ -344,7 +344,7 @@ def generate_token(request, id):
 
         # Required for Chat grants
         service_sid = settings.TWILIO_CHAT_SERVICE_SID
-        identity = str(id)
+        identity = id
         logger.info(f"Service SID: {service_sid}, Identity: {identity}")
 
         # Log before creating the token
@@ -377,7 +377,7 @@ def initiateOrFetchConversation(request):
         # Extract user IDs from the request
         data = json.loads(request.body)
         player_id = data.get('userID')
-        coach_id = data.get('match_id')
+        coach_id = data.get('coachID')
 
         # Fetch users from the database
         #player = PlayerUser.objects.get(id=player_id)

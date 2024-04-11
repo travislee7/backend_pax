@@ -26,7 +26,7 @@ urlpatterns = [
     path('api/reviews/', CreateReview.as_view(), name='create-review'),
     path('api/reviews/<int:user_id>/', ReadReviews.as_view(), name='user-reviews'),
 
-    path('generate-token/<int:id>/', generate_token, name='generate-token'),
+    path('generate-token/<str:id>/', generate_token, name='generate-token'),
     path('initiate-conversation/', initiateOrFetchConversation, name='initiate-conversation'),
 
 ]

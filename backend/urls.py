@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation 
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI 
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -28,5 +28,7 @@ urlpatterns = [
 
     path('generate-token/<str:id>/', generate_token, name='generate-token'),
     path('initiate-conversation/', initiateOrFetchConversation, name='initiate-conversation'),
+
+    path('api/media-message/', MediaMessageAPI.as_view(), name='media-message'),
 
 ]

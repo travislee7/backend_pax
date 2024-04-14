@@ -50,7 +50,7 @@ TWILIO_API_KEY = 'SKeb4a43898c8344481957c16d9713ac70'
 TWILIO_API_KEY_SECRET = 'mPLK3APeqvxMFxxn7M2gWQ2CPMK1JLfv'
 TWILIO_CHAT_SERVICE_SID = 'IS15b7c890ffc640e2abf1cf80e74e6329'
 
-# AWS S3 Settings
+# AWS S3 Settings for Profile Pics / Vids
 AWS_ACCESS_KEY_ID = 'AKIAS74GIVSG4OQA4VXW'
 AWS_SECRET_ACCESS_KEY = '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'
 AWS_STORAGE_BUCKET_NAME = 'paxphotos'
@@ -58,6 +58,9 @@ AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 AWS_LOCATION = ''
 AWS_DEFAULT_ACL = 'public-read'  # Ensure this aligns with your security policies
+
+AWS_STORAGE_BUCKET_NAME2 = 'twiliomediafiles'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

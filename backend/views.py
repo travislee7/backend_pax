@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review, Conversation
+from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -19,6 +19,8 @@ from django.views.decorators.csrf import csrf_exempt
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import ChatGrant
 from twilio.rest import Client
+import subprocess
+from django.core.files.base import ContentFile
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -436,3 +438,41 @@ def initiateOrFetchConversation(request):
     except Exception as e:
         # Handle errors
         return JsonResponse({'error': str(e)}, status=500)
+    
+class MediaMessageAPI(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.FILES['file']
+        conversation_sid = request.data.get('conversation_sid')
+
+        file_extension = file_obj.name.split('.')[-1]
+
+        if file_extension.lower() in ['mov', 'quicktime']:
+            # Convert video to mp4
+            output_name = f"{file_obj.name.split('.')[0]}.mp4"
+            output_path = f"/tmp/{output_name}"
+            command = ['ffmpeg', '-y', '-i', file_obj.temporary_file_path(), '-preset', 'fast', '-crf', '28', '-c:v', 'libx264', '-c:a', 'aac', '-b:a', '192k', output_path]
+            subprocess.run(command, check=True)
+            # Reassign file_obj to the new file
+            with open(output_path, 'rb') as f:
+                file_obj = ContentFile(f.read(), name=output_name)
+
+        
+        # Upload to S3
+        s3_client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY, region_name='us-east-1')
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME2
+        unique_file_name = f"uploads/{uuid.uuid4()}_{file_obj.name}"
+        s3_client.upload_fileobj(
+            file_obj,
+            bucket_name,
+            unique_file_name,
+            ExtraArgs={'ACL': 'public-read'}
+        )
+        media_url = f"https://{bucket_name}.s3.amazonaws.com/{unique_file_name}"
+
+        # Save to database
+        MediaFiles.objects.create(conversation_sid=conversation_sid, s3url=media_url)
+
+        # Return the URL
+        return JsonResponse({"url": media_url}, status=201)

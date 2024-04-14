@@ -52,7 +52,7 @@ class Review(models.Model):
     def __str__(self):
         return f"Review by {self.user.email} for {self.playeruser.email} - Rating: {self.rating}"
 
-#Twilio
+#Twilio conversations
 class Conversation(models.Model):
     player_id = models.CharField(max_length=255)
     coach_id = models.CharField(max_length=255)
@@ -60,3 +60,11 @@ class Conversation(models.Model):
 
     def __str__(self):
         return f"{self.player_id} <-> {self.coach_id}"
+    
+#Twilio media/doc file messages
+class MediaFiles(models.Model):
+    conversation_sid = models.CharField(max_length=255)
+    s3url = models.CharField(max_length=500, null=True, blank=True)
+
+    def __str__(self):
+        return self.s3url

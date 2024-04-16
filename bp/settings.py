@@ -49,6 +49,7 @@ TWILIO_AUTH_TOKEN = '13dc07e7dd0bbdece5c4a03c21b16632'
 TWILIO_API_KEY = 'SKeb4a43898c8344481957c16d9713ac70'
 TWILIO_API_KEY_SECRET = 'mPLK3APeqvxMFxxn7M2gWQ2CPMK1JLfv'
 TWILIO_CHAT_SERVICE_SID = 'IS15b7c890ffc640e2abf1cf80e74e6329'
+FCM_CREDENTIAL_SID = 'AIzaSyA7mXYjhPOHUNDtN5cpArlj3d6egy5UjX8'
 
 # AWS S3 Settings for Profile Pics / Vids
 AWS_ACCESS_KEY_ID = 'AKIAS74GIVSG4OQA4VXW'
@@ -151,6 +152,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
 
 LOGGING = {
     'version': 1,

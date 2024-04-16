@@ -357,8 +357,10 @@ def generate_token(request, id):
         # Log after token creation
         logger.info("Access token created successfully")
 
+        fcm_token = settings.FCM_CREDENTIAL_SID
+        logger.info('FCM: ' + fcm_token)
         # Create a Chat grant and add to token
-        chat_grant = ChatGrant(service_sid=service_sid)
+        chat_grant = ChatGrant(service_sid=service_sid, push_credential_sid=fcm_token)
         token.add_grant(chat_grant)
 
         logger.info("Chat grant added to token")
@@ -447,8 +449,8 @@ class MediaMessageAPI(APIView):
         conversation_sid = request.data.get('conversation_sid')
 
         file_extension = file_obj.name.split('.')[-1]
-
-        if file_extension.lower() in ['mov', 'quicktime']:
+        logger.info(file_extension.lower())
+        if file_extension.lower() in ['mov', 'quicktime', 'MOV']:
             # Convert video to mp4
             output_name = f"{file_obj.name.split('.')[0]}.mp4"
             output_path = f"/tmp/{output_name}"
@@ -476,3 +478,32 @@ class MediaMessageAPI(APIView):
 
         # Return the URL
         return JsonResponse({"url": media_url}, status=201)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def push_notifications(request):
+    try:
+        # Parse the incoming JSON to get the FCM token
+        data = json.loads(request.body)
+        fcm_token = data['fcmToken']
+        user_identity = data['userIdentity']  # Assuming the identity is also sent
+        logger.info('FCM IN PLAY')
+        # Twilio setup
+        account_sid = settings.TWILIO_ACCOUNT_SID
+        auth_token = settings.TWILIO_AUTH_TOKEN
+        service_sid = settings.TWILIO_CHAT_SERVICE_SID
+
+        client = Client(account_sid, auth_token)
+        
+        # Create a binding between the user and the FCM token
+        binding = client.notify.services(service_sid).bindings.create(
+            identity=user_identity,
+            binding_type='fcm',
+            address=fcm_token,
+        )
+        ('FCM WORKING')
+        # Return a success response
+        return JsonResponse({"message": "FCM token registered successfully", "binding_sid": binding.sid}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

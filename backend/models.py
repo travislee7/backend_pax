@@ -68,3 +68,11 @@ class MediaFiles(models.Model):
 
     def __str__(self):
         return self.s3url
+    
+class PushStatus(models.Model):
+    user_id = models.CharField(max_length=255)
+    push_token = models.CharField(max_length=255, null=True, blank=True)
+    deviceType = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.user_id

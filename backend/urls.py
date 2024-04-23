@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, push_notifications
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -31,6 +31,12 @@ urlpatterns = [
 
     path('api/media-message/', MediaMessageAPI.as_view(), name='media-message'),
 
-    path('push-notifications/', push_notifications, name='push-notifications'),
+    #path('push-notifications/', push_notifications, name='push-notifications'),
+    #path('api/update-push-config/', update_push_configuration, name='update_push_config'),
+
+    #path('api/bind-user/', bind_user_to_notifications, name='bind-user'),
+    path('api/save-push-token/', savePushToken, name='save-token'),
+    path('api/send-notification/', send_notification, name='send-notification'),
+
 
 ]

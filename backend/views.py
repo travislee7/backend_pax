@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles
+from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -21,6 +21,14 @@ from twilio.jwt.access_token.grants import ChatGrant
 from twilio.rest import Client
 import subprocess
 from django.core.files.base import ContentFile
+import requests
+from exponent_server_sdk import (
+    DeviceNotRegisteredError,
+    PushClient,
+    PushMessage,
+    PushServerError,
+    PushTicketError,
+)
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -346,6 +354,7 @@ def generate_token(request, id):
 
         # Required for Chat grants
         service_sid = settings.TWILIO_CHAT_SERVICE_SID
+        logger.info('GENERATE TOKEN: ' + id)
         identity = id
         logger.info(f"Service SID: {service_sid}, Identity: {identity}")
 
@@ -357,10 +366,11 @@ def generate_token(request, id):
         # Log after token creation
         logger.info("Access token created successfully")
 
-        fcm_token = settings.FCM_CREDENTIAL_SID
-        logger.info('FCM: ' + fcm_token)
+        #fcm_token = settings.FCM_CREDENTIAL_SID
+        #logger.info('FCM: ' + fcm_token)
         # Create a Chat grant and add to token
-        chat_grant = ChatGrant(service_sid=service_sid, push_credential_sid=fcm_token)
+        #pushCredential = settings.APN_CREDENTIAL_SID
+        chat_grant = ChatGrant(service_sid=service_sid) #push_credential_sid=pushCredential)
         token.add_grant(chat_grant)
 
         logger.info("Chat grant added to token")
@@ -382,6 +392,9 @@ def initiateOrFetchConversation(request):
         data = json.loads(request.body)
         player_id = data.get('userID')
         coach_id = data.get('coachID')
+        notificationsEnabled = data.get('notificationsEnabled')
+        deviceType = data.get('deviceType')
+        pushToken = data.get('token')
 
         # Fetch users from the database
         #player = PlayerUser.objects.get(id=player_id)
@@ -413,18 +426,28 @@ def initiateOrFetchConversation(request):
                              .conversations \
                              .create(friendly_name='Friendly Conversation')
         
-        # Add both users as participants (example uses the user's phone number as identity)
+
+        '''if notificationsEnabled == 'yes':
+            participant = client.conversations.conversations(conversation.sid) \
+            .participants \
+            .create(identity='user_identity', 
+                    messaging_binding_address='device_address', 
+                    messaging_binding_proxy_address='proxy_address')
+            print(participant.sid)'''
+
+
+            # Add both users as participants (example uses the user's phone number as identity)
         client.conversations \
-              .v1 \
-              .conversations(conversation.sid) \
-              .participants \
-              .create(identity=coach_identity)  # Adjust attribute as necessary
+            .v1 \
+            .conversations(conversation.sid) \
+            .participants \
+            .create(identity=coach_identity)  # Adjust attribute as necessary
 
         client.conversations \
-              .v1 \
-              .conversations(conversation.sid) \
-              .participants \
-              .create(identity=player_identity)  # Adjust attribute as necessary
+            .v1 \
+            .conversations(conversation.sid) \
+            .participants \
+            .create(identity=player_identity)  # Adjust attribute as necessary
 
         
         Conversation.objects.create(
@@ -481,6 +504,70 @@ class MediaMessageAPI(APIView):
     
 @csrf_exempt
 @require_http_methods(["POST"])
+def savePushToken(request):
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('userId')
+        push_token = data.get('pushToken')
+        deviceType = data.get('deviceType')
+
+        # Check if the entry already exists or update the existing one
+        PushStatus.objects.update_or_create(
+            user_id=user_id,
+            defaults={'push_token': push_token},
+            deviceType=deviceType,
+        )
+
+        return JsonResponse({'status': 'success', 'message': 'Push token saved successfully'}, status=201)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)    
+
+@csrf_exempt
+def send_notification(request):
+    data = json.loads(request.body)
+    user_id = data.get('userID')
+    message_text = data.get('message')
+    
+    # Retrieve the push token and device type
+    push_status = PushStatus.objects.get(user_id=user_id)
+    push_token = push_status.push_token
+
+    if not push_token.startswith('ExponentPushToken['):
+        push_token = f'ExponentPushToken[{push_token}]'
+
+    device_type = push_status.deviceType
+
+    logger.info('CALLED: ' + push_token)
+
+    if device_type == 'ios':
+        # Prepare the message payload for Expo
+        '''message_body = {
+            "to": push_token,
+            "sound": "default",
+            "title": "New Message",
+            "body": message_text,
+            "data": {"message": message_text}  # Additional data to include
+        }
+
+        response = requests.post('https://exp.host/--/api/v2/push/send', json=message_body)'''
+        session = requests.Session()
+        response = PushClient(session=session).publish(
+        PushMessage(to=push_token,
+                    body=message_text,
+                    data=None))
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Notification sent successfully',
+            'expo_response': response.json()
+        })
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Unsupported device type'})
+    
+'''
+@csrf_exempt
+@require_http_methods(["POST"])
 def push_notifications(request):
     try:
         # Parse the incoming JSON to get the FCM token
@@ -507,3 +594,63 @@ def push_notifications(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+'''
+
+
+
+'''@csrf_exempt
+def bind_user_to_notifications(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('userID')
+            user_type = data.get('userType')
+            token = data.get('pushToken')
+            device_type = data.get('deviceType')  # Retrieve device type from POST data
+
+
+            # Twilio credentials from environment variables or settings
+            account_sid = settings.TWILIO_ACCOUNT_SID
+            auth_token = settings.TWILIO_AUTH_TOKEN
+            service_sid = settings.TWILIO_CHAT_SERVICE_SID
+
+            # Initialize Twilio client
+            client = Client(account_sid, auth_token)
+
+            # Determine binding type based on device type
+            if device_type == 'ios':
+                binding_type = 'apn'  # Apple Push Notification service
+            elif device_type == 'android':
+                binding_type = 'gcm'  # Google Cloud Messaging service, or 'fcm' for Firebase Cloud Messaging
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Invalid device type'}, status=400)
+
+            # Create binding to Twilio
+            binding = client.conversations.services(service_sid).bindings.create(
+                identity=f"{user_id}_{user_type}",  # Identity as a combination of user_id and user_type
+                binding_type=binding_type,  # For Apple Push Notification service
+                address=token
+                #tag=[user_type]  # Optional: Use tags for segmenting notifications
+            )
+
+            logger.info('prebind')
+
+            identity = f"{user_id}_{user_type}"
+            logger.info('user:' + identity)
+            binding = client.conversations.services(service_sid) \
+            .bindings \
+            .create(identity=identity, 
+                    binding_type=binding_type, 
+                    address=token
+                    #tag=['premium_user']
+                    )
+            
+            logger.info(binding.sid)
+            logger.info('BINDINGGGGGGGG')
+
+
+            return JsonResponse({'status': 'success', 'message': 'User bound to notifications', 'binding_sid': binding.sid}, status=201)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)'''

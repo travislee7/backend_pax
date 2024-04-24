@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -37,6 +37,9 @@ urlpatterns = [
     #path('api/bind-user/', bind_user_to_notifications, name='bind-user'),
     path('api/save-push-token/', savePushToken, name='save-token'),
     path('api/send-notification/', send_notification, name='send-notification'),
+
+    path('api/update-status/', updateStatus, name='update-status'),
+
 
 
 ]

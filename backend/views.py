@@ -525,45 +525,70 @@ def savePushToken(request):
 
 @csrf_exempt
 def send_notification(request):
-    data = json.loads(request.body)
-    user_id = data.get('userID')
-    message_text = data.get('message')
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('userId')
+        conversation_sid = data.get('conversationSid')
+
+        # Check if conversation SID exists
+        conversation = Conversation.objects.filter(conversation_sid=conversation_sid).first()
+        if not conversation:
+            return JsonResponse({'status': 'error', 'message': 'Conversation not found'}, status=404)
+
+        # Determine the other party's ID
+        other_user_id = conversation.coach_id if user_id == conversation.player_id else conversation.player_id
+        logger.info('OTHER: ' + other_user_id)
+        # Check for the other party's push status
+        push_status = PushStatus.objects.filter(user_id=other_user_id).first()
+        if not push_status or not push_status.push_token:
+            return JsonResponse({'status': 'error', 'message': 'No push token available for the user'}, status=404)
+
+        # Prepare and send the push notification
+        push_token = push_status.push_token
+        if not push_token.startswith('ExponentPushToken['):
+            push_token = f'ExponentPushToken[{push_token}]'
+
+        logger.info('PUSH TOK ' + push_token)
+        device_type = push_status.deviceType
+        message_text = "You have a new message!"  # Customizable message text
+
+        # Send push notification according to the device type
+        response = PushClient().publish(
+            PushMessage(to=push_token,
+                        body=message_text,
+                        data={"extra": "data"})
+        )
+
+        # Check for errors in the response and return appropriate response
+        if response.errors:
+            return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
+        
+        return JsonResponse({'status': 'success', 'message': 'Notification sent successfully'}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
-    # Retrieve the push token and device type
-    push_status = PushStatus.objects.get(user_id=user_id)
-    push_token = push_status.push_token
+@csrf_exempt
+@require_http_methods(["POST"])
+def updateStatus(request):
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('userId')
+        status = data.get('status')
 
-    if not push_token.startswith('ExponentPushToken['):
-        push_token = f'ExponentPushToken[{push_token}]'
+        if not user_id or not status:
+            return JsonResponse({'status': 'error', 'message': 'Missing userId or status'}, status=400)
 
-    device_type = push_status.deviceType
+        # Update or create the entry with the user_id and status
+        PushStatus.objects.update_or_create(
+            user_id=user_id,
+            defaults={'status': status}
+        )
 
-    logger.info('CALLED: ' + push_token)
+        return JsonResponse({'status': 'success', 'message': 'Status updated successfully'}, status=201)
 
-    if device_type == 'ios':
-        # Prepare the message payload for Expo
-        '''message_body = {
-            "to": push_token,
-            "sound": "default",
-            "title": "New Message",
-            "body": message_text,
-            "data": {"message": message_text}  # Additional data to include
-        }
-
-        response = requests.post('https://exp.host/--/api/v2/push/send', json=message_body)'''
-        session = requests.Session()
-        response = PushClient(session=session).publish(
-        PushMessage(to=push_token,
-                    body=message_text,
-                    data=None))
-
-        return JsonResponse({
-            'status': 'success',
-            'message': 'Notification sent successfully',
-            'expo_response': response.json()
-        })
-    else:
-        return JsonResponse({'status': 'error', 'message': 'Unsupported device type'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
 '''
 @csrf_exempt

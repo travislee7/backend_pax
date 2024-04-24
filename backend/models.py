@@ -73,6 +73,8 @@ class PushStatus(models.Model):
     user_id = models.CharField(max_length=255)
     push_token = models.CharField(max_length=255, null=True, blank=True)
     deviceType = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=255, null=True, blank=True)  # Optional status field
+
 
     def __str__(self):
         return self.user_id

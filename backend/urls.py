@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -39,7 +39,10 @@ urlpatterns = [
     path('api/send-notification/', send_notification, name='send-notification'),
 
     path('api/update-status/', updateStatus, name='update-status'),
+    
+    path('api/retrieve-stripe-account/<int:coach_id>/', RetrieveStripeAccount.as_view(), name='retrieve-stripe-account'),
 
+    path('api/manage_stripe_account/', ManageStripeAccount.as_view(), name='manage-stripe-account'),
 
 
 ]

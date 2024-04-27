@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, PlayerUser, PlayerCategories, Review
+from .models import User, PlayerUser, PlayerCategories, Review, StripeAccounts
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -89,3 +89,7 @@ class ReviewReadSerializer(serializers.ModelSerializer):
         fields = ['id', 'playeruser', 'user', 'rating', 'description', 'playeruser_details']
     
     
+class StripeAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StripeAccounts
+        fields = ['stripe_account_id']

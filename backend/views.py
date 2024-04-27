@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus
-from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer
+from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus, StripeAccounts
+from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer, StripeAccountSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 import boto3
@@ -29,6 +29,8 @@ from exponent_server_sdk import (
     PushServerError,
     PushTicketError,
 )
+import stripe
+
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
 
@@ -590,6 +592,58 @@ def updateStatus(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
+
+
+class ManageStripeAccount(APIView):
+    def post(self, request, *args, **kwargs):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        stripe_account_id = request.data.get('stripe_account_id', '').strip()
+        coach_id = request.data.get('coach_id')  # Get coach ID from the request
+
+        logger.info('ACCT: ' + stripe_account_id)
+        try:
+            if stripe_account_id:
+                # Retrieve the existing account
+                account = stripe.Account.retrieve(stripe_account_id)
+                # Assume need to check if onboarding is complete
+                if account.charges_enabled and account.details_submitted:
+                    return JsonResponse({'status': 'onboarding_complete', 'account_id': account.id}, status=status.HTTP_200_OK)
+                else:
+                    # Incomplete onboarding
+                    account_link = stripe.AccountLink.create(
+                        account=account.id,
+                        refresh_url="https://your-website.com/reauth",
+                        return_url="https://your-website.com/return",
+                        type="account_onboarding"
+                    )
+                    return JsonResponse({'status': 'onboarding_incomplete', 'url': account_link.url}, status=status.HTTP_202_ACCEPTED)
+            else:
+                # Create a new account
+                new_account = stripe.Account.create(type="express")
+                account_link = stripe.AccountLink.create(
+                    account=new_account.id,
+                    refresh_url="https://your-website.com/reauth",
+                    return_url="https://your-website.com/return",
+                    type="account_onboarding"
+                )
+
+                StripeAccounts.objects.create(coach_id=coach_id, stripe_account_id=new_account.id)
+                return JsonResponse({'status': 'account_created', 'url': account_link.url}, status=status.HTTP_201_CREATED)
+
+        except stripe.error.StripeError as e:
+            logger.error(f'Stripe API error: {str(e)}')
+            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RetrieveStripeAccount(APIView):
+    def get(self, request, coach_id):
+        try:
+            stripe_account = StripeAccounts.objects.get(coach_id=coach_id)
+            serializer = StripeAccountSerializer(stripe_account)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except StripeAccounts.DoesNotExist:
+            return Response({"message": "Coach ID does not have a Stripe account."}, status=status.HTTP_404_NOT_FOUND)
+
+
 '''
 @csrf_exempt
 @require_http_methods(["POST"])

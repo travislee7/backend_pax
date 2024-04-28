@@ -643,93 +643,65 @@ class RetrieveStripeAccount(APIView):
         except StripeAccounts.DoesNotExist:
             return Response({"message": "Coach ID does not have a Stripe account."}, status=status.HTTP_404_NOT_FOUND)
 
+class CreatePaymentIntentView(APIView):
+    def post(self, request, *args, **kwargs):
+        logger.info(request.data)
+        conversation_sid = request.data.get('conversationSID')
+        amount = request.data.get('amount')
 
-'''
-@csrf_exempt
-@require_http_methods(["POST"])
-def push_notifications(request):
-    try:
-        # Parse the incoming JSON to get the FCM token
-        data = json.loads(request.body)
-        fcm_token = data['fcmToken']
-        user_identity = data['userIdentity']  # Assuming the identity is also sent
-        logger.info('FCM IN PLAY')
-        # Twilio setup
-        account_sid = settings.TWILIO_ACCOUNT_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
-        service_sid = settings.TWILIO_CHAT_SERVICE_SID
-
-        client = Client(account_sid, auth_token)
-        
-        # Create a binding between the user and the FCM token
-        binding = client.notify.services(service_sid).bindings.create(
-            identity=user_identity,
-            binding_type='fcm',
-            address=fcm_token,
-        )
-        ('FCM WORKING')
-        # Return a success response
-        return JsonResponse({"message": "FCM token registered successfully", "binding_sid": binding.sid}, status=200)
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-'''
-
-
-
-'''@csrf_exempt
-def bind_user_to_notifications(request):
-    if request.method == 'POST':
         try:
-            data = json.loads(request.body)
-            user_id = data.get('userID')
-            user_type = data.get('userType')
-            token = data.get('pushToken')
-            device_type = data.get('deviceType')  # Retrieve device type from POST data
+            # Retrieve conversation to find coach ID
+            conversation = Conversation.objects.get(conversation_sid=conversation_sid)
+            coach_id = conversation.coach_id.replace('_coach', '')
+            logger.info(coach_id)
+
+            # Retrieve Stripe account ID
+            stripe_account = StripeAccounts.objects.get(coach=coach_id)
+            stripe_account_id = stripe_account.stripe_account_id
+            logger.info('Str id' + stripe_account_id)
 
 
-            # Twilio credentials from environment variables or settings
-            account_sid = settings.TWILIO_ACCOUNT_SID
-            auth_token = settings.TWILIO_AUTH_TOKEN
-            service_sid = settings.TWILIO_CHAT_SERVICE_SID
+            # Calculate amount and application fee
+            amount = int(float(amount) * 100)  # Convert dollars to cents
+            logger.info('AMOUNT' + str(amount))
 
-            # Initialize Twilio client
-            client = Client(account_sid, auth_token)
+            application_fee = int(float(amount * 0.2))
+            total_amount = int(float(amount * 1.1))
 
-            # Determine binding type based on device type
-            if device_type == 'ios':
-                binding_type = 'apn'  # Apple Push Notification service
-            elif device_type == 'android':
-                binding_type = 'gcm'  # Google Cloud Messaging service, or 'fcm' for Firebase Cloud Messaging
-            else:
-                return JsonResponse({'status': 'error', 'message': 'Invalid device type'}, status=400)
+            logger.info('TOTAL AMOUNT' + str(total_amount))
 
-            # Create binding to Twilio
-            binding = client.conversations.services(service_sid).bindings.create(
-                identity=f"{user_id}_{user_type}",  # Identity as a combination of user_id and user_type
-                binding_type=binding_type,  # For Apple Push Notification service
-                address=token
-                #tag=[user_type]  # Optional: Use tags for segmenting notifications
+            logger.info('APP FEE' + str(application_fee))
+
+            '''customer = stripe.Customer.create()
+            ephemeralKey = stripe.EphemeralKey.create(
+                customer=customer['id'],
+                stripe_version='2024-04-10',
+            )'''
+            # Create PaymentIntent
+            intent = stripe.PaymentIntent.create(
+                amount= total_amount,
+                currency='usd',
+                #customer=customer['id'],
+
+                application_fee_amount=application_fee,
+                automatic_payment_methods={
+                    'enabled': True,
+                },
+                transfer_data={
+                    'destination': stripe_account_id,
+                },
             )
+            logger.info('INTENT' + str(intent.client_secret))
+            return JsonResponse({
+                'clientSecret': intent.client_secret,
+                'publishableKey': settings.STRIPE_PUBLISHABLE_KEY,
+                #'customer': customer.id, 
+                #'ephemeralKey': ephemeralKey.secret
 
-            logger.info('prebind')
-
-            identity = f"{user_id}_{user_type}"
-            logger.info('user:' + identity)
-            binding = client.conversations.services(service_sid) \
-            .bindings \
-            .create(identity=identity, 
-                    binding_type=binding_type, 
-                    address=token
-                    #tag=['premium_user']
-                    )
-            
-            logger.info(binding.sid)
-            logger.info('BINDINGGGGGGGG')
-
-
-            return JsonResponse({'status': 'success', 'message': 'User bound to notifications', 'binding_sid': binding.sid}, status=201)
+            })
+        except stripe.error.StripeError as e:
+            # Handle Stripe API errors
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    else:
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)'''
+            # Handle general errors
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

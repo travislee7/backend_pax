@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -45,6 +45,13 @@ urlpatterns = [
     path('api/manage_stripe_account/', ManageStripeAccount.as_view(), name='manage-stripe-account'),
 
     path('api/create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),
+
+    path('api/log-transaction/', log_transaction, name='log_transaction'),
+
+    path('api/get-player-past-lessons/', get_player_past_lessons, name='get-player-past-lessons'),
+    path('api/get-coach-past-lessons/', get_coach_past_lessons, name='get-coach-past-lessons'),
+
+    #path('api/refresh-stripe/<str:account_id>/', RefreshStripeOnboarding.as_view(), name='refresh-stripe'),
 
 
 ]

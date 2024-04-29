@@ -83,3 +83,13 @@ class PushStatus(models.Model):
 class StripeAccounts(models.Model):
     coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coach_stripe_account_id')
     stripe_account_id = models.CharField(max_length=255, null=True, blank=True)
+
+
+class TransactionHistory(models.Model):
+    player_id = models.CharField(max_length=255)
+    coach_id = models.CharField(max_length=255)
+    transaction_amount = models.IntegerField(null=True, blank=True)  # Adjust max_digits as needed
+
+    def __str__(self):
+        return f'{self.player_id} paid {self.coach_id} ${self.transaction_amount}'
+

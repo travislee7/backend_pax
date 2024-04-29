@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus, StripeAccounts
+from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer, StripeAccountSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -612,8 +612,9 @@ class ManageStripeAccount(APIView):
                     # Incomplete onboarding
                     account_link = stripe.AccountLink.create(
                         account=account.id,
-                        refresh_url="https://your-website.com/reauth",
-                        return_url="https://your-website.com/return",
+                        refresh_url=f"https://connect.stripe.com/setup/c/{account.id}",
+                        #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{account.id}/",  # This URL should point to your Django server endpoint
+                        return_url="https://google.com",
                         type="account_onboarding"
                     )
                     return JsonResponse({'status': 'onboarding_incomplete', 'url': account_link.url}, status=status.HTTP_202_ACCEPTED)
@@ -622,8 +623,9 @@ class ManageStripeAccount(APIView):
                 new_account = stripe.Account.create(type="express")
                 account_link = stripe.AccountLink.create(
                     account=new_account.id,
-                    refresh_url="https://your-website.com/reauth",
-                    return_url="https://your-website.com/return",
+                    refresh_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
+                    #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{new_account.id}/",  # This URL should point to your Django server endpoint
+                    return_url="https://google.com",
                     type="account_onboarding"
                 )
 
@@ -633,6 +635,20 @@ class ManageStripeAccount(APIView):
         except stripe.error.StripeError as e:
             logger.error(f'Stripe API error: {str(e)}')
             return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+'''class RefreshStripeOnboarding(APIView):
+    def get(self, request, account_id):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            account_link = stripe.AccountLink.create(
+                account=account_id,
+                refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{account_id}/",
+                return_url="https://your-website.com/return",
+                type="account_onboarding"
+            )
+            return JsonResponse({'url': account_link.url}, status=status.HTTP_200_OK)
+        except stripe.error.StripeError as e:
+            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)'''
 
 class RetrieveStripeAccount(APIView):
     def get(self, request, coach_id):
@@ -645,6 +661,7 @@ class RetrieveStripeAccount(APIView):
 
 class CreatePaymentIntentView(APIView):
     def post(self, request, *args, **kwargs):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         logger.info(request.data)
         conversation_sid = request.data.get('conversationSID')
         amount = request.data.get('amount')
@@ -668,9 +685,9 @@ class CreatePaymentIntentView(APIView):
             application_fee = int(float(amount * 0.2))
             total_amount = int(float(amount * 1.1))
 
-            logger.info('TOTAL AMOUNT' + str(total_amount))
+            logger.info(type(total_amount))
 
-            logger.info('APP FEE' + str(application_fee))
+            logger.info(type(application_fee))
 
             '''customer = stripe.Customer.create()
             ephemeralKey = stripe.EphemeralKey.create(
@@ -689,19 +706,99 @@ class CreatePaymentIntentView(APIView):
                 },
                 transfer_data={
                     'destination': stripe_account_id,
-                },
+                }
             )
-            logger.info('INTENT' + str(intent.client_secret))
+            logger.info('INTENT')
             return JsonResponse({
                 'clientSecret': intent.client_secret,
                 'publishableKey': settings.STRIPE_PUBLISHABLE_KEY,
                 #'customer': customer.id, 
                 #'ephemeralKey': ephemeralKey.secret
-
             })
         except stripe.error.StripeError as e:
             # Handle Stripe API errors
+            logger.info('STRIPE ERROR')
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             # Handle general errors
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+def log_transaction(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        conversation_sid = data['conversationSid']
+        charge_amount = data['chargeAmount']
+        charge_amount = int(float(charge_amount) * 1.1)
+
+        try:
+            # Fetch conversation data
+            conversation = Conversation.objects.get(conversation_sid=conversation_sid)
+            # Strip suffixes from player_id and coach_id
+            player_id = conversation.player_id.rstrip('_player')
+            coach_id = conversation.coach_id.rstrip('_coach')
+
+            # Create a new transaction history record
+            TransactionHistory.objects.create(
+                player_id=player_id,
+                coach_id=coach_id,
+                transaction_amount=charge_amount
+            )
+            return JsonResponse({'status': 'success'}, status=200)
+        except Conversation.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Conversation not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@csrf_exempt
+def get_player_past_lessons(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_id = data['userID']
+
+        # Fetch all transactions where the user is the player
+        transactions = TransactionHistory.objects.filter(player_id=user_id)
+        response_data = []
+
+        for transaction in transactions:
+            try:
+                coach = User.objects.get(pk=transaction.coach_id)
+                response_data.append({
+                    'first_name': coach.first_name,
+                    'last_name': coach.last_name,
+                    'transaction_amount': f'${transaction.transaction_amount}'
+                })
+            except User.DoesNotExist:
+                continue  # Skip if no coach found with the id
+
+        return JsonResponse(response_data, safe=False, status=200)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+@csrf_exempt
+def get_coach_past_lessons(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_id = data['userID']
+
+        # Fetch all transactions where the user is the player
+        transactions = TransactionHistory.objects.filter(coach_id=user_id)
+        response_data = []
+
+        for transaction in transactions:
+            try:
+                player = PlayerUser.objects.get(pk=transaction.player_id)
+                modified_amount = transaction.transaction_amount * 10 / 11 * 0.9
+                formatted_amount = f"${modified_amount:.2f}"  # Formats the amount to two decimal places
+                response_data.append({
+                    'first_name': player.first_name,
+                    'last_name': player.last_name,
+                    'transaction_amount': formatted_amount # Rounded for cleanliness
+                })
+            except PlayerUser.DoesNotExist:
+                continue  # Skip if no coach found with the id
+
+        return JsonResponse(response_data, safe=False, status=200)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)

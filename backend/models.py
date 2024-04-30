@@ -42,15 +42,6 @@ class PlayerCategories(models.Model):
 
     def __str__(self):
         return f"Categories for {self.player.email}"
-    
-class Review(models.Model):
-    playeruser = models.ForeignKey(PlayerUser, on_delete=models.CASCADE, related_name='reviews_as_player')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_as_user')
-    rating = models.IntegerField(null=True, blank=True)  # Adjust max_digits as needed
-    description = models.TextField()
-
-    def __str__(self):
-        return f"Review by {self.user.email} for {self.playeruser.email} - Rating: {self.rating}"
 
 #Twilio conversations
 class Conversation(models.Model):
@@ -93,3 +84,19 @@ class TransactionHistory(models.Model):
     def __str__(self):
         return f'{self.player_id} paid {self.coach_id} ${self.transaction_amount}'
 
+class ReviewStatus(models.Model):
+    player_id = models.CharField(max_length=255)
+    coach_id = models.CharField(max_length=255)
+    charge_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, default='pending')
+
+class Reviews(models.Model):
+    player_id = models.CharField(max_length=255)
+    coach_id = models.CharField(max_length=255)
+    coach_first_name = models.CharField(max_length=100)
+    coach_last_name = models.CharField(max_length=100)
+    rating = models.IntegerField()
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f'Review for {self.coach_first_name} {self.coach_last_name} by {self.player_id}'

@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Review, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory
-from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, ReviewSerializer, ReviewReadSerializer, StripeAccountSerializer
+from .models import User, PlayerUser, PlayerCategories, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory, ReviewStatus, Reviews
+from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, StripeAccountSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 import boto3
@@ -327,7 +327,7 @@ class PlayerProfileRead(APIView):
 
 # Create reviews, and show reviews on Coach Profile page
 
-class CreateReview(APIView):
+'''class CreateReview(APIView):
     def post(self, request, *args, **kwargs):
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
@@ -339,7 +339,7 @@ class ReadReviews(APIView):
     def get(self, request, user_id, format=None):
         reviews = Review.objects.filter(user=user_id)
         serializer = ReviewReadSerializer(reviews, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data)'''
 
 #Twilio 
         
@@ -802,3 +802,70 @@ def get_coach_past_lessons(request):
         return JsonResponse(response_data, safe=False, status=200)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+@csrf_exempt
+def pending_review(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        conversation_sid = data['conversationSid']
+        charge_amount = data['chargeAmount']
+        charge_amount = int(float(charge_amount) * 1.1)
+        
+        conversation = Conversation.objects.get(conversation_sid=conversation_sid)
+        player_id = conversation.player_id.rstrip('_player')
+        coach_id = conversation.coach_id.rstrip('_coach')
+
+        ReviewStatus.objects.create(
+            player_id=player_id,
+            coach_id=coach_id,
+            charge_amount=charge_amount
+        )
+
+        return JsonResponse({'status': 'success'}, status=200)
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+def get_reviews_to_do(request, player_id):
+    if request.method == 'GET':
+        # Fetch all pending reviews for the given player_id
+        reviews = ReviewStatus.objects.filter(player_id=player_id, status='pending')
+        results = []
+        for review in reviews:
+            try:
+                coach = User.objects.get(pk=review.coach_id)
+                results.append({
+                    'review_id': review.id,
+                    'coach_first_name': coach.first_name,
+                    'coach_last_name': coach.last_name,
+                    'transaction_amount': review.charge_amount,
+                    'coach_id': review.coach_id,
+                    'player_id': review.player_id
+                })
+            except User.DoesNotExist:
+                continue  # Handle the case where no coach is found
+
+        return JsonResponse(results, safe=False)  # 'safe=False' for non-dict objects
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@csrf_exempt
+def submit_review(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        try:
+            # Update the ReviewStatus to 'complete'
+            review_status = ReviewStatus.objects.get(id=data['review_id'])
+            review_status.status = 'complete'
+            review_status.save()
+
+            # Create a new Review entry
+            Reviews.objects.create(
+                player_id=data['player_id'],
+                coach_id=data['coach_id'],
+                coach_first_name=data['coach_first_name'],
+                coach_last_name=data['coach_last_name'],
+                rating=data['rating'],
+                description=data['description']
+            )
+            return JsonResponse({'message': 'Review submitted successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid request'}, status=400)

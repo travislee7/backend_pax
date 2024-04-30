@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, PlayerUser, PlayerCategories, Review, StripeAccounts
+from .models import User, PlayerUser, PlayerCategories, StripeAccounts
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,7 +75,7 @@ class PlayerCategoriesWithPlayerSerializer(serializers.ModelSerializer):
         # Directly return the associated PlayerUser data using the SimplifiedPlayerUserSerializer
         return SimplifiedPlayerUserSerializer(obj.player).data
 
-class ReviewSerializer(serializers.ModelSerializer):
+'''class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'playeruser', 'user', 'rating', 'description']
@@ -86,7 +86,7 @@ class ReviewReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['id', 'playeruser', 'user', 'rating', 'description', 'playeruser_details']
+        fields = ['id', 'playeruser', 'user', 'rating', 'description', 'playeruser_details']'''
     
     
 class StripeAccountSerializer(serializers.ModelSerializer):

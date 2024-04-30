@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, CreateReview, ReadReviews, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -23,8 +23,8 @@ urlpatterns = [
     path('api/userprofileread/<int:pk>/', UserProfileRead.as_view(), name='user-profile-read'),  
     path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
 
-    path('api/reviews/', CreateReview.as_view(), name='create-review'),
-    path('api/reviews/<int:user_id>/', ReadReviews.as_view(), name='user-reviews'),
+    #path('api/reviews/', CreateReview.as_view(), name='create-review'),
+    #path('api/reviews/<int:user_id>/', ReadReviews.as_view(), name='user-reviews'),
 
     path('generate-token/<str:id>/', generate_token, name='generate-token'),
     path('initiate-conversation/', initiateOrFetchConversation, name='initiate-conversation'),
@@ -50,6 +50,14 @@ urlpatterns = [
 
     path('api/get-player-past-lessons/', get_player_past_lessons, name='get-player-past-lessons'),
     path('api/get-coach-past-lessons/', get_coach_past_lessons, name='get-coach-past-lessons'),
+
+    path('api/pending-review/', pending_review, name='pending-review'),
+
+    path('api/get-reviews-to-do/<str:player_id>/', get_reviews_to_do, name='get-reviews-to-do'),
+
+    path('api/submit-review/', submit_review, name='submit_review'),
+
+
 
     #path('api/refresh-stripe/<str:account_id>/', RefreshStripeOnboarding.as_view(), name='refresh-stripe'),
 

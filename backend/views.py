@@ -30,6 +30,8 @@ from exponent_server_sdk import (
     PushTicketError,
 )
 import stripe
+from django.db.models import Avg
+
 
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
@@ -869,3 +871,36 @@ def submit_review(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+def check_pending_reviews(request, user_id):
+    if request.method == 'GET':
+        # Check for any pending reviews
+        pending_reviews = ReviewStatus.objects.filter(player_id=user_id, status='pending').exists()
+        
+        if pending_reviews:
+            return JsonResponse({"hasPending": True}, status=200)
+        else:
+            return JsonResponse({"hasPending": False}, status=200)
+        
+def get_coach_reviews(request, coach_id):
+    if request.method == 'GET':
+        reviews = Reviews.objects.filter(coach_id=coach_id)
+        average_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        review_list = []
+        
+        for review in reviews:
+            player = PlayerUser.objects.get(pk=review.player_id)
+            review_list.append({
+                'player_first_name': player.first_name,
+                'player_last_name': player.last_name,
+                'player_age': player.age,
+                'rating': review.rating,
+                'description': review.description
+            })
+
+        response_data = {
+            'average_rating': round(average_rating, 2),
+            'reviews': review_list
+        }
+        
+        return JsonResponse(response_data, safe=False)

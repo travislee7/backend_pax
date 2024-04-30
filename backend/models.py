@@ -2,7 +2,6 @@ from django.db import models
 from django.core.validators import MinLengthValidator
 from django.contrib.postgres.fields import ArrayField
 
-
 class User(models.Model):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, unique=True)  
@@ -100,3 +99,6 @@ class Reviews(models.Model):
 
     def __str__(self):
         return f'Review for {self.coach_first_name} {self.coach_last_name} by {self.player_id}'
+    
+
+

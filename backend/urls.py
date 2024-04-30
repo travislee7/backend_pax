@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review, check_pending_reviews, get_coach_reviews #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -56,6 +56,10 @@ urlpatterns = [
     path('api/get-reviews-to-do/<str:player_id>/', get_reviews_to_do, name='get-reviews-to-do'),
 
     path('api/submit-review/', submit_review, name='submit_review'),
+    
+    path('api/check-pending-reviews/<int:user_id>/', check_pending_reviews, name='check_pending_reviews'),
+
+    path('api/get-coach-reviews/<int:coach_id>/', get_coach_reviews, name='get_coach_reviews'),
 
 
 

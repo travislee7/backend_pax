@@ -365,7 +365,7 @@ def generate_token(request, id):
         # Log before creating the token
         logger.info("Creating access token")
 
-        token = AccessToken(account_sid, api_key, api_secret, identity=identity)
+        token = AccessToken(account_sid, api_key, api_secret, identity=identity, ttl=86400)
 
         # Log after token creation
         logger.info("Access token created successfully")

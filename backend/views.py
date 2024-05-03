@@ -10,7 +10,7 @@ from django.conf import settings
 import uuid
 from django.db.models import Q
 import base64
-from django.http import QueryDict, JsonResponse
+from django.http import QueryDict, JsonResponse, HttpResponseRedirect
 import logging
 import json
 from django.shortcuts import get_object_or_404
@@ -31,6 +31,7 @@ from exponent_server_sdk import (
 )
 import stripe
 from django.db.models import Avg
+
 
 
 
@@ -347,28 +348,28 @@ class ReadReviews(APIView):
         
 def generate_token(request, id):
     try:
-        logger.info("Starting token generation process")
+        #logger.info("Starting token generation process")
 
         account_sid = settings.TWILIO_ACCOUNT_SID
-        logger.info(f"Using Account SID: {account_sid}")
+        #logger.info(f"Using Account SID: {account_sid}")
         
         api_key = settings.TWILIO_API_KEY
         api_secret = settings.TWILIO_API_KEY_SECRET
-        logger.info("API Key and Secret retrieved")
+        #logger.info("API Key and Secret retrieved")
 
         # Required for Chat grants
         service_sid = settings.TWILIO_CHAT_SERVICE_SID
-        logger.info('GENERATE TOKEN: ' + id)
+        #logger.info('GENERATE TOKEN: ' + id)
         identity = id
-        logger.info(f"Service SID: {service_sid}, Identity: {identity}")
+        #logger.info(f"Service SID: {service_sid}, Identity: {identity}")
 
         # Log before creating the token
-        logger.info("Creating access token")
+        #logger.info("Creating access token")
 
         token = AccessToken(account_sid, api_key, api_secret, identity=identity, ttl=86400)
 
         # Log after token creation
-        logger.info("Access token created successfully")
+        #logger.info("Access token created successfully")
 
         #fcm_token = settings.FCM_CREDENTIAL_SID
         #logger.info('FCM: ' + fcm_token)
@@ -377,11 +378,11 @@ def generate_token(request, id):
         chat_grant = ChatGrant(service_sid=service_sid) #push_credential_sid=pushCredential)
         token.add_grant(chat_grant)
 
-        logger.info("Chat grant added to token")
+        #logger.info("Chat grant added to token")
 
         jwt_token = token.to_jwt()
 
-        logger.info("JWT token generated successfully")
+        #logger.info("JWT token generated successfully")
 
         return JsonResponse({'access_token': jwt_token})
     except Exception as e:
@@ -615,8 +616,7 @@ class ManageStripeAccount(APIView):
                     account_link = stripe.AccountLink.create(
                         account=account.id,
                         refresh_url=f"https://connect.stripe.com/setup/c/{account.id}",
-                        #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{account.id}/",  # This URL should point to your Django server endpoint
-                        return_url="https://google.com",
+                        return_url=f"https://connect.stripe.com/setup/c/{account.id}",
                         type="account_onboarding"
                     )
                     return JsonResponse({'status': 'onboarding_incomplete', 'url': account_link.url}, status=status.HTTP_202_ACCEPTED)
@@ -627,7 +627,7 @@ class ManageStripeAccount(APIView):
                     account=new_account.id,
                     refresh_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
                     #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{new_account.id}/",  # This URL should point to your Django server endpoint
-                    return_url="https://google.com",
+                    return_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
                     type="account_onboarding"
                 )
 
@@ -637,20 +637,11 @@ class ManageStripeAccount(APIView):
         except stripe.error.StripeError as e:
             logger.error(f'Stripe API error: {str(e)}')
             return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
-'''class RefreshStripeOnboarding(APIView):
-    def get(self, request, account_id):
-        stripe.api_key = settings.STRIPE_SECRET_KEY
-        try:
-            account_link = stripe.AccountLink.create(
-                account=account_id,
-                refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{account_id}/",
-                return_url="https://your-website.com/return",
-                type="account_onboarding"
-            )
-            return JsonResponse({'url': account_link.url}, status=status.HTTP_200_OK)
-        except stripe.error.StripeError as e:
-            return JsonResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)'''
+def redirect_to_app(request):
+    return HttpResponseRedirect('performaxxionapp://setup_payments')
+
 
 class RetrieveStripeAccount(APIView):
     def get(self, request, coach_id):

@@ -31,8 +31,7 @@ from exponent_server_sdk import (
 )
 import stripe
 from django.db.models import Avg
-
-
+import subprocess
 
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
@@ -487,6 +486,17 @@ class MediaMessageAPI(APIView):
             # Reassign file_obj to the new file
             with open(output_path, 'rb') as f:
                 file_obj = ContentFile(f.read(), name=output_name)
+        elif file_extension.lower() in ['doc', 'docx', 'document']:
+            output_pdf = f"{file_obj.name.rsplit('.', 1)[0]}.pdf"
+            output_pdf_path = f"/tmp/{output_pdf}"
+            try:
+                subprocess.run(['unoconv', '-f', 'pdf', '-o', output_pdf_path, file_obj.temporary_file_path()], check=True)
+                with open(output_pdf_path, 'rb') as f:
+                    file_obj = ContentFile(f.read(), name=output_pdf)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to convert document: {str(e)}")
+                return Response({"error": "Failed to convert document to PDF"}, status=500)
+
 
         
         # Upload to S3

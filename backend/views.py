@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory, ReviewStatus, Reviews
+from .models import User, PlayerUser, PlayerCategories, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory, ReviewStatus, Reviews #UnreadPushCount
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, StripeAccountSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -327,21 +327,6 @@ class PlayerProfileRead(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-# Create reviews, and show reviews on Coach Profile page
-
-'''class CreateReview(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = ReviewSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class ReadReviews(APIView):
-    def get(self, request, user_id, format=None):
-        reviews = Review.objects.filter(user=user_id)
-        serializer = ReviewReadSerializer(reviews, many=True)
-        return Response(serializer.data)'''
 
 #Twilio 
         
@@ -544,6 +529,7 @@ def send_notification(request):
         data = json.loads(request.body)
         user_id = data.get('userId')
         conversation_sid = data.get('conversationSid')
+        category = data.get('category')
 
         # Check if conversation SID exists
         conversation = Conversation.objects.filter(conversation_sid=conversation_sid).first()
@@ -578,11 +564,57 @@ def send_notification(request):
         if response.errors:
             return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
         
+        '''logger.info('WHO', user_id)
+        #For push notification badge count
+        if user_id == conversation.player_id:
+            # Current user is the player, other_user_id is the coach
+            unread_count, created = UnreadPushCount.objects.get_or_create(
+                coach_id=other_user_id, player_id=user_id, category=category,
+                defaults={'unreadPushFromPlayer': 1}
+            )
+            if not created:
+                unread_count.unreadPushFromPlayer += 1
+                unread_count.save()
+        else:
+            # Current user is the coach, other_user_id is the player
+            unread_count, created = UnreadPushCount.objects.get_or_create(
+                player_id=other_user_id, coach_id=user_id, category=category,
+                defaults={'unreadPushFromCoach': 1}
+            )
+            if not created:
+                unread_count.unreadPushFromCoach += 1
+                unread_count.save()'''
+
+
         return JsonResponse({'status': 'success', 'message': 'Notification sent successfully'}, status=200)
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
+'''@require_http_methods(["GET"])
+def get_unread_player_push_count(request):
+    user_id = request.GET.get('user_id')
+    player_id = request.GET.get('player_id')
+    category = request.GET.get('category')
+
+    if not all([user_id, player_id, category]):
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    try:
+        unread_count = UnreadPushCount.objects.filter(
+            coach_id=user_id,
+            player_id=player_id,
+            category=category
+        ).first()
+
+        if unread_count and unread_count.unreadPushFromPlayer > 0:
+            return JsonResponse({'has_unread': True})
+        else:
+            return JsonResponse({'has_unread': False})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)'''
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def updateStatus(request):

@@ -70,6 +70,16 @@ class PushStatus(models.Model):
     def __str__(self):
         return self.user_id
     
+'''class UnreadPushCount(models.Model):
+    player_id = models.CharField(max_length=255)
+    unreadPushFromPlayer = models.IntegerField(default=0)
+    coach_id = models.CharField(max_length=255)
+    unreadPushFromCoach = models.IntegerField(default=0)
+    category = models.CharField(max_length=100)'''
+
+
+
+    
 class StripeAccounts(models.Model):
     coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coach_stripe_account_id')
     stripe_account_id = models.CharField(max_length=255, null=True, blank=True)

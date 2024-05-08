@@ -554,8 +554,6 @@ def send_notification(request):
         message_text = "You have a new message!"  # Customizable message text
 
 
-
-
         logger.info('WHO ' + user_id)
         logger.info('CAT ' + category_push)
         #For push notification badge count
@@ -577,8 +575,6 @@ def send_notification(request):
             if not created:
                 unread_status.unreadPushFromCoach = 'true'
                 unread_status.save()
-
-
 
         # Send push notification according to the device type
         response = PushClient().publish(
@@ -663,6 +659,84 @@ def mark_player_as_read(request):
 
         if unread_status:
             unread_status.unreadPushFromPlayer = 'false'
+            unread_status.save()
+            return JsonResponse({'status': 'success', 'message': 'Marked as read successfully'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'No matching record found'}, status=404)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+@require_http_methods(["GET"])
+def get_unread_coach_push_count(request):
+    user_id = request.GET.get('userID')
+    coach_id = request.GET.get('coachID')
+    category = request.GET.get('category')
+
+    if not all([user_id, coach_id, category]):
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    user_id += '_player'
+    coach_id += '_coach'
+
+    logger.info('P ' + user_id)
+    logger.info('C ' + coach_id)
+    logger.info('cat ' + category)
+    
+    try:
+        unread_status = UnreadPushCount.objects.filter(
+            coach_id=coach_id,
+            player_id=user_id,
+            category=category
+        ).first()
+
+        if (unread_status):
+            logger.info('obj')
+        else:
+            logger.info('nah')
+
+        #logger.info(unread_status.unreadPushFromPlayer)
+        if unread_status and unread_status.unreadPushFromCoach == 'true':
+            return JsonResponse({'has_unread': True})
+        else:
+            return JsonResponse({'has_unread': False})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def mark_coach_as_read(request):
+    # Assuming data is sent as JSON
+    data = json.loads(request.body)
+    player_id = data.get('playerID')
+    user_id = data.get('userID')
+    category = data.get('category')
+
+    if not all([user_id, player_id, category]):
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    #logger.info('C ' + user_id)
+    #logger.info('P ' + player_id)
+    #logger.info('cat ' + category)
+
+    try:
+        # Append suffixes as needed
+        user_id = f"{user_id}_coach"
+        player_id = f"{player_id}_player"
+
+        logger.info('C ' + user_id)
+        logger.info('P ' + player_id)
+        logger.info('cat ' + category)        
+        # Try to get the UnreadPushCount instance
+        unread_status = UnreadPushCount.objects.filter(
+            coach_id=user_id,
+            player_id=player_id,
+            category=category
+        ).first()
+
+        if unread_status:
+            unread_status.unreadPushFromCoach = 'false'
             unread_status.save()
             return JsonResponse({'status': 'success', 'message': 'Marked as read successfully'})
         else:

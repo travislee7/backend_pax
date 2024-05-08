@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, PlayerUser, PlayerCategories, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory, ReviewStatus, Reviews #UnreadPushCount
+from .models import User, PlayerUser, PlayerCategories, Conversation, MediaFiles, PushStatus, StripeAccounts, TransactionHistory, ReviewStatus, Reviews, UnreadPushCount
 from .serializers import UserSerializer, PlayerUserSerializer, PlayerCategoriesSerializer, PlayerCategoriesWithPlayerSerializer, StripeAccountSerializer
 from rest_framework.generics import UpdateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -529,7 +529,7 @@ def send_notification(request):
         data = json.loads(request.body)
         user_id = data.get('userId')
         conversation_sid = data.get('conversationSid')
-        category = data.get('category')
+        category_push = data.get('category')
 
         # Check if conversation SID exists
         conversation = Conversation.objects.filter(conversation_sid=conversation_sid).first()
@@ -553,6 +553,33 @@ def send_notification(request):
         device_type = push_status.deviceType
         message_text = "You have a new message!"  # Customizable message text
 
+
+
+
+        logger.info('WHO ' + user_id)
+        logger.info('CAT ' + category_push)
+        #For push notification badge count
+        if user_id == conversation.player_id:
+            # Current user is the player, other_user_id is the coach
+            unread_status, created = UnreadPushCount.objects.get_or_create(
+                coach_id=other_user_id, player_id=user_id, category=category_push,
+                defaults={'unreadPushFromPlayer': 'true'}
+            )
+            if not created:
+                unread_status.unreadPushFromPlayer = 'true'
+                unread_status.save()
+        else:
+            # Current user is the coach, other_user_id is the player
+            unread_status, created = UnreadPushCount.objects.get_or_create(
+                player_id=other_user_id, coach_id=user_id, category=category_push,
+                defaults={'unreadPushFromCoach': 'true'}
+            )
+            if not created:
+                unread_status.unreadPushFromCoach = 'true'
+                unread_status.save()
+
+
+
         # Send push notification according to the device type
         response = PushClient().publish(
             PushMessage(to=push_token,
@@ -562,58 +589,87 @@ def send_notification(request):
 
         # Check for errors in the response and return appropriate response
         if response.errors:
-            return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
-        
-        '''logger.info('WHO', user_id)
-        #For push notification badge count
-        if user_id == conversation.player_id:
-            # Current user is the player, other_user_id is the coach
-            unread_count, created = UnreadPushCount.objects.get_or_create(
-                coach_id=other_user_id, player_id=user_id, category=category,
-                defaults={'unreadPushFromPlayer': 1}
-            )
-            if not created:
-                unread_count.unreadPushFromPlayer += 1
-                unread_count.save()
-        else:
-            # Current user is the coach, other_user_id is the player
-            unread_count, created = UnreadPushCount.objects.get_or_create(
-                player_id=other_user_id, coach_id=user_id, category=category,
-                defaults={'unreadPushFromCoach': 1}
-            )
-            if not created:
-                unread_count.unreadPushFromCoach += 1
-                unread_count.save()'''
-
+            logger.info('CONTINUE')
+            #return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
 
         return JsonResponse({'status': 'success', 'message': 'Notification sent successfully'}, status=200)
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
-'''@require_http_methods(["GET"])
+@require_http_methods(["GET"])
 def get_unread_player_push_count(request):
-    user_id = request.GET.get('user_id')
-    player_id = request.GET.get('player_id')
+    user_id = request.GET.get('userID')
+    player_id = request.GET.get('playerID')
     category = request.GET.get('category')
 
     if not all([user_id, player_id, category]):
         return JsonResponse({'error': 'Missing parameters'}, status=400)
 
+    user_id += '_coach'
+    player_id += '_player'
+
+    #logger.info('C ' + user_id)
+    #logger.info('P ' + player_id)
+    #logger.info('cat ' + category)
+    
     try:
-        unread_count = UnreadPushCount.objects.filter(
+        unread_status = UnreadPushCount.objects.filter(
             coach_id=user_id,
             player_id=player_id,
             category=category
         ).first()
 
-        if unread_count and unread_count.unreadPushFromPlayer > 0:
+        '''if (unread_status):
+            logger.info('obj')
+        else:
+            logger.info('nah')'''
+
+        logger.info(unread_status.unreadPushFromPlayer)
+        if unread_status and unread_status.unreadPushFromPlayer == 'true':
             return JsonResponse({'has_unread': True})
         else:
             return JsonResponse({'has_unread': False})
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)'''
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@csrf_exempt
+@require_http_methods(["POST"])
+def mark_player_as_read(request):
+    # Assuming data is sent as JSON
+    data = json.loads(request.body)
+    user_id = data.get('userID')
+    player_id = data.get('playerID')
+    category = data.get('category')
+
+    if not all([user_id, player_id, category]):
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    try:
+        # Append suffixes as needed
+        user_id = f"{user_id}_coach"
+        player_id = f"{player_id}_player"
+
+        logger.info('C ' + user_id)
+        logger.info('P ' + player_id)
+        logger.info('cat ' + category)        
+        # Try to get the UnreadPushCount instance
+        unread_status = UnreadPushCount.objects.filter(
+            coach_id=user_id,
+            player_id=player_id,
+            category=category
+        ).first()
+
+        if unread_status:
+            unread_status.unreadPushFromPlayer = 'false'
+            unread_status.save()
+            return JsonResponse({'status': 'success', 'message': 'Marked as read successfully'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'No matching record found'}, status=404)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
 @require_http_methods(["POST"])

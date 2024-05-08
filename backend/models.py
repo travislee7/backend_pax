@@ -70,13 +70,12 @@ class PushStatus(models.Model):
     def __str__(self):
         return self.user_id
     
-'''class UnreadPushCount(models.Model):
+class UnreadPushCount(models.Model):
     player_id = models.CharField(max_length=255)
-    unreadPushFromPlayer = models.IntegerField(default=0)
+    unreadPushFromPlayer = models.CharField(max_length=5, default='false')
     coach_id = models.CharField(max_length=255)
-    unreadPushFromCoach = models.IntegerField(default=0)
-    category = models.CharField(max_length=100)'''
-
+    unreadPushFromCoach = models.CharField(max_length=5, default='false')
+    category = models.CharField(max_length=100)
 
 
     

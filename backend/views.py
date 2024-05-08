@@ -788,7 +788,9 @@ class ManageStripeAccount(APIView):
                     account_link = stripe.AccountLink.create(
                         account=account.id,
                         refresh_url=f"https://connect.stripe.com/setup/c/{account.id}",
-                        return_url=f"https://connect.stripe.com/setup/c/{account.id}",
+                        #return_url=f"https://connect.stripe.com/setup/c/{account.id}",
+                        return_url="https://stripe.com/connect",
+
                         type="account_onboarding"
                     )
                     return JsonResponse({'status': 'onboarding_incomplete', 'url': account_link.url}, status=status.HTTP_202_ACCEPTED)
@@ -799,7 +801,9 @@ class ManageStripeAccount(APIView):
                     account=new_account.id,
                     refresh_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
                     #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{new_account.id}/",  # This URL should point to your Django server endpoint
-                    return_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
+                    #return_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
+                    return_url="https://stripe.com/connect",
+
                     type="account_onboarding"
                 )
 

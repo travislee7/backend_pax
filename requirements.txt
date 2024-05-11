@@ -5,3 +5,5 @@ django-storages==1.14.2
 boto3==1.34.45
 psycopg2-binary==2.9.9
 twilio==9.0.0
+stripe==9.4.0
+exponent_server_sdk==2.1.0

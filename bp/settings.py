@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%y@iwnu*(1q0w8qdzdo3x_$tjg4e%*9!88^$#z16@a%%&(o2p!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', 'PaxApp-env.eba-pypfqzks.us-east-1.elasticbeanstalk.com', '.elasticbeanstalk.com', '10.0.0.165', '0.0.0.0']
+ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', 'PaxApp-env.eba-pypfqzks.us-east-1.elasticbeanstalk.com', '.elasticbeanstalk.com', '10.0.0.165', '0.0.0.0', 'cert.performaxxion.com']
 
 
 # Application definition

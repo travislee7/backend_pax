@@ -24,7 +24,7 @@ urlpatterns = [
     path('api/playerprofileread/<int:pk>/', PlayerProfileRead.as_view(), name='user-profile-read'),  
 
 
-    path('generate-token/<str:id>/', generate_token, name='generate-token'),
+    path('generate-token/<str:id>', generate_token, name='generate-token'),
     path('initiate-conversation/', initiateOrFetchConversation, name='initiate-conversation'),
 
     path('api/media-message/', MediaMessageAPI.as_view(), name='media-message'),

@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-%y@iwnu*(1q0w8qdzdo3x_$tjg4e%*9!88^$#z16@a%%&(o2p!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', 'PaxApp-env.eba-pypfqzks.us-east-1.elasticbeanstalk.com', '.elasticbeanstalk.com', '10.0.0.165', '0.0.0.0', 'cert.performaxxion.com']
+ALLOWED_HOSTS = ['192.168.0.70', 'localhost', '127.0.0.1', '34.239.108.137', 'Performaxxion-env.eba-c2i5smzi.us-east-1.elasticbeanstalk.com', '.elasticbeanstalk.com', '10.0.0.165', '0.0.0.0', 'cert.performaxxion.com', '3.227.30.199', '.performaxxion.com', '*'] 
 
 
 # Application definition
@@ -78,6 +78,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 ]
+
+#SECURE_SSL_REDIRECT = True
+
 
 ROOT_URLCONF = 'bp.urls'
 
@@ -158,6 +161,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+
+
 FILE_UPLOAD_HANDLERS = [
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
 ]
@@ -191,3 +196,16 @@ LOGGING = {
         },
     },
 }
+
+'''# Security settings
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# HSTS settings
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# If behind a proxy like NGINX, add this:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')'''

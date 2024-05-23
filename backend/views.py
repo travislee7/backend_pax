@@ -39,6 +39,8 @@ import subprocess
 class UserCreate(APIView):
     def post(self, request, format=None):
         data = request.data
+        logger.info("Received request data: %s", data)
+
 
         try:
             media_files = []
@@ -68,10 +70,26 @@ class UserCreate(APIView):
             return Response({"error": "Failed to upload image to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
+        '''if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)'''
+
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                logger.info("Successfully saved user data: %s", serializer.data)
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.info('DID NOT SAVE SERIALIZER DATA')
+                logger.error(f"Failed to save serializer data: {e}", exc_info=True)
+                return Response({"error": "Failed to save user data"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # Log the serializer errors to help diagnose the problem
+            logger.info('STRAIGHT UP SERIALIER ERROR')
+            logger.error(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserSignIn(APIView):
@@ -366,7 +384,7 @@ def generate_token(request, id):
 
         jwt_token = token.to_jwt()
 
-        #logger.info("JWT token generated successfully")
+        logger.info("JWT token generated successfully")
 
         return JsonResponse({'access_token': jwt_token})
     except Exception as e:

@@ -87,7 +87,7 @@ class StripeAccounts(models.Model):
 class TransactionHistory(models.Model):
     player_id = models.CharField(max_length=255)
     coach_id = models.CharField(max_length=255)
-    transaction_amount = models.IntegerField(null=True, blank=True)  # Adjust max_digits as needed
+    transaction_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return f'{self.player_id} paid {self.coach_id} ${self.transaction_amount}'

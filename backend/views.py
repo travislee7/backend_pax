@@ -32,6 +32,8 @@ from exponent_server_sdk import (
 import stripe
 from django.db.models import Avg
 import subprocess
+from decimal import Decimal, ROUND_HALF_UP
+
 
 
 # Coach Signup and signin / upload coach images to aws s3 bucket / patch request for media2 and media3 attributes
@@ -953,7 +955,7 @@ def log_transaction(request):
         data = json.loads(request.body)
         conversation_sid = data['conversationSid']
         charge_amount = data['chargeAmount']
-        charge_amount = int(float(charge_amount) * 1.1)
+        charge_amount = round(float(charge_amount) * 1.1, 2)
 
         try:
             # Fetch conversation data
@@ -1013,7 +1015,12 @@ def get_coach_past_lessons(request):
         for transaction in transactions:
             try:
                 player = PlayerUser.objects.get(pk=transaction.player_id)
-                modified_amount = transaction.transaction_amount * 10 / 11 * 0.9
+                #modified_amount = transaction.transaction_amount * 10 / 11 * 0.9
+                #formatted_amount = f"${modified_amount:.2f}"  # Formats the amount to two decimal places
+
+                modified_amount = transaction.transaction_amount * Decimal('10') / Decimal('11') * Decimal('0.9')
+                # Round to two decimal places
+                modified_amount = modified_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 formatted_amount = f"${modified_amount:.2f}"  # Formats the amount to two decimal places
                 response_data.append({
                     'first_name': player.first_name,
@@ -1033,7 +1040,7 @@ def pending_review(request):
         data = json.loads(request.body)
         conversation_sid = data['conversationSid']
         charge_amount = data['chargeAmount']
-        charge_amount = int(float(charge_amount) * 1.1)
+        charge_amount = round(float(charge_amount) * 1.1, 2)
         
         conversation = Conversation.objects.get(conversation_sid=conversation_sid)
         player_id = conversation.player_id.rstrip('_player')

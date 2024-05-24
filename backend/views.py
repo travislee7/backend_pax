@@ -574,6 +574,59 @@ def send_notification(request):
 
         logger.info('WHO ' + user_id)
         logger.info('CAT ' + category_push)
+        '''#For push notification badge count
+        if user_id == conversation.player_id:
+            # Current user is the player, other_user_id is the coach
+            unread_status, created = UnreadPushCount.objects.get_or_create(
+                coach_id=other_user_id, player_id=user_id, category=category_push,
+                defaults={'unreadPushFromPlayer': 'true'}
+            )
+            if not created:
+                unread_status.unreadPushFromPlayer = 'true'
+                unread_status.save()
+        else:
+            # Current user is the coach, other_user_id is the player
+            unread_status, created = UnreadPushCount.objects.get_or_create(
+                player_id=other_user_id, coach_id=user_id, category=category_push,
+                defaults={'unreadPushFromCoach': 'true'}
+            )
+            if not created:
+                unread_status.unreadPushFromCoach = 'true'
+                unread_status.save()'''
+
+        # Send push notification according to the device type
+        response = PushClient().publish(
+            PushMessage(to=push_token,
+                        body=message_text,
+                        data={"extra": "data"})
+        )
+
+        # Check for errors in the response and return appropriate response
+        if response.errors:
+            logger.info('CONTINUE')
+            #return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
+
+        return JsonResponse({'status': 'success', 'message': 'Notification sent successfully'}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+@csrf_exempt
+def create_unread_push_count(request):
+        data = json.loads(request.body)
+        user_id = data.get('userId')
+        conversation_sid = data.get('conversationSid')
+        category_push = data.get('category')
+
+        # Check if conversation SID exists
+        conversation = Conversation.objects.filter(conversation_sid=conversation_sid).first()
+        if not conversation:
+            return JsonResponse({'status': 'error', 'message': 'Conversation not found'}, status=404)
+
+        # Determine the other party's ID
+        other_user_id = conversation.coach_id if user_id == conversation.player_id else conversation.player_id
+        logger.info('OTHER: ' + other_user_id)
+
         #For push notification badge count
         if user_id == conversation.player_id:
             # Current user is the player, other_user_id is the coach
@@ -593,24 +646,8 @@ def send_notification(request):
             if not created:
                 unread_status.unreadPushFromCoach = 'true'
                 unread_status.save()
+        
 
-        # Send push notification according to the device type
-        response = PushClient().publish(
-            PushMessage(to=push_token,
-                        body=message_text,
-                        data={"extra": "data"})
-        )
-
-        # Check for errors in the response and return appropriate response
-        if response.errors:
-            logger.info('CONTINUE')
-            #return JsonResponse({'status': 'error', 'message': str(response.errors)}, status=500)
-
-        return JsonResponse({'status': 'success', 'message': 'Notification sent successfully'}, status=200)
-
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    
 @require_http_methods(["GET"])
 def get_unread_player_push_count(request):
     user_id = request.GET.get('userID')

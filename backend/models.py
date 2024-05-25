@@ -16,6 +16,9 @@ class User(models.Model):
     bio = models.CharField(max_length=1000, null=True, blank=True)  
     coach_category = models.CharField(max_length=100, null=True, blank=True)
     #coach_category = ArrayField(models.CharField(max_length=100), blank=True, null=True)
+    link1 = models.CharField(max_length=100, null=True, blank=True)
+    link2 = models.CharField(max_length=100, null=True, blank=True)
+    link3 = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return self.email

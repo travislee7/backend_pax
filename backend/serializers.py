@@ -4,7 +4,7 @@ from .models import User, PlayerUser, PlayerCategories, StripeAccounts
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'phone_number', 'password', 'first_name', 'last_name', 'media1', 'media2', 'media3', 'location', 'age', 'bio', 'coach_category']
+        fields = ['id', 'email', 'phone_number', 'password', 'first_name', 'last_name', 'media1', 'media2', 'media3', 'location', 'age', 'bio', 'coach_category', 'link1', 'link2', 'link3']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):

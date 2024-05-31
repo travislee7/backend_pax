@@ -1133,3 +1133,14 @@ def get_coach_reviews(request, coach_id):
         }
         
         return JsonResponse(response_data, safe=False)
+    
+def search_coaches(request):
+    query = request.GET.get('query', '')
+    if query:
+        coaches = User.objects.filter(
+            Q(first_name__icontains=query) | 
+            Q(last_name__icontains=query) |
+            Q(first_name__icontains=query.split(' ')[0], last_name__icontains=query.split(' ')[-1])
+        ).values('id', 'first_name', 'last_name', 'media1', 'bio', 'location', 'media2', 'media3')
+        return JsonResponse(list(coaches), safe=False)
+    return JsonResponse([], safe=False)

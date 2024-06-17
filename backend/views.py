@@ -33,6 +33,18 @@ import stripe
 from django.db.models import Avg
 import subprocess
 from decimal import Decimal, ROUND_HALF_UP
+import logging
+import os
+
+
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from rest_framework.decorators import api_view
+from .custom_token_generator import custom_token_generator
+
 
 
 
@@ -530,6 +542,13 @@ def savePushToken(request):
         user_id = data.get('userId')
         push_token = data.get('pushToken')
         deviceType = data.get('deviceType')
+
+        #logger.info(f"Received data: user_id={user_id}, push_token={push_token}, device_type={deviceType}")
+        try:
+            logger.info(f"Received data: user_id={user_id}, push_token={push_token}, device_type={deviceType}")
+        except Exception as e:
+            logger.error("Error logging push token info")
+
 
         # Check if the entry already exists or update the existing one
         PushStatus.objects.update_or_create(
@@ -1144,3 +1163,113 @@ def search_coaches(request):
         ).values('id', 'first_name', 'last_name', 'media1', 'bio', 'location', 'media2', 'media3')
         return JsonResponse(list(coaches), safe=False)
     return JsonResponse([], safe=False)
+
+
+'''@api_view(['POST'])
+def password_reset_request(request):
+    email = request.data.get('email')
+    if not email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    user = User.objects.filter(email=email).first() or PlayerUser.objects.filter(email=email).first()
+    if user:
+        token = custom_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # Determine the base URL based on the environment
+        is_expo_go = os.getenv('IS_EXPO_GO', 'true') == 'true'
+        if is_expo_go:
+            # Update with your actual Expo Go development URL
+            base_url = 'exp://10.0.0.165:8081/--/'
+        else:
+            base_url = 'performaxxion://'
+        password_reset_url = f"{base_url}reset-password/{uid}/{token}/"
+
+        # Create the email message directly in the view
+        message = f"""
+        Hi {user.first_name},
+
+        You requested a password reset. Click the link below to reset your password:
+
+        {password_reset_url}
+
+        If you didn't request this, please ignore this email.
+        """
+
+        send_mail(
+            'Password Reset Request',
+            message,
+            'support@performaxxion.com',  # Your Hostinger email address
+            [email],
+            fail_silently=False,
+        )
+        return JsonResponse({'message': 'Password reset instructions have been sent to your email.'}, status=200)
+
+    return JsonResponse({'error': 'Email not found'}, status=404)'''
+
+@api_view(['POST'])
+def password_reset_request(request):
+    email = request.data.get('email')
+    user_type = request.data.get('user_type')
+    if not email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+    if not user_type:
+        return JsonResponse({'error': 'User type is required'}, status=400)
+
+    user = User.objects.filter(email=email).first() if user_type == 'coach' else PlayerUser.objects.filter(email=email).first()
+    if user:
+        token = custom_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # Determine the base URL based on the environment
+        is_expo_go = os.getenv('IS_EXPO_GO', 'true') == 'true'
+        if is_expo_go:
+            # Update with your actual Expo Go development URL
+            base_url = 'exp://10.0.0.165:8081/--/'
+        else:
+            base_url = 'performaxxion://'
+        password_reset_url = f"{base_url}reset-password/{user_type}/{uid}/{token}/{email}/"
+
+        # Create the email message directly in the view
+        message = f"""
+        Hi {user.first_name},
+
+        You requested a password reset. Click the link below to reset your password:
+
+        {password_reset_url}
+
+        If you didn't request this, please ignore this email.
+        """
+
+        send_mail(
+            'Password Reset Request',
+            message,
+            'support@performaxxion.com',  # Your Hostinger email address
+            [email],
+            fail_silently=False,
+        )
+        return JsonResponse({'message': 'Password reset instructions have been sent to your email.'}, status=200)
+
+    return JsonResponse({'error': 'Email not found'}, status=404)
+
+
+@api_view(['POST'])
+def password_reset_confirm(request):
+    email = request.data.get('email')
+    user_type = request.data.get('user_type')
+    new_password = request.data.get('new_password')
+    
+    if not email or not user_type or not new_password:
+        return JsonResponse({'error': 'Email, user type, and new password are required'}, status=400)
+    
+    if user_type == 'player':
+        user = PlayerUser.objects.filter(email=email).first()
+    else:
+        user = User.objects.filter(email=email).first()
+
+    if user:
+        user.password = new_password
+        user.save()
+        return JsonResponse({'message': 'Password has been reset successfully'}, status=200)
+    else:
+        return JsonResponse({'error': 'User not found'}, status=404)

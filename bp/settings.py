@@ -209,3 +209,13 @@ SECURE_HSTS_PRELOAD = True
 
 # If behind a proxy like NGINX, add this:
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')'''
+
+# settings.py
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.hostinger.com'  # This is the SMTP host for Hostinger
+EMAIL_PORT = 587  # Port for TLS, use 465 for SSL
+EMAIL_USE_TLS = True  # Use TLS, set to False if using SSL and change port to 465
+EMAIL_HOST_USER = 'support@performaxxion.com'  # Your Hostinger email address
+EMAIL_HOST_PASSWORD = 'JaidoTrav123!'  # Your Hostinger email password
+DEFAULT_FROM_EMAIL = 'Performaxxion Support <support@performaxxion.com>'

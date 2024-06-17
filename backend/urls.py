@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review, check_pending_reviews, get_coach_reviews, get_unread_player_push_count, mark_player_as_read, get_unread_coach_push_count, mark_coach_as_read, create_unread_push_count, search_coaches #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review, check_pending_reviews, get_coach_reviews, get_unread_player_push_count, mark_player_as_read, get_unread_coach_push_count, mark_coach_as_read, create_unread_push_count, search_coaches, password_reset_request, password_reset_confirm #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -71,6 +71,11 @@ urlpatterns = [
     path('api/get-coach-reviews/<int:coach_id>/', get_coach_reviews, name='get_coach_reviews'),
 
     path('api/search-coaches/', search_coaches, name='search-coaches'),
+
+
+    path('api/password-reset/', password_reset_request, name='password_reset_request'),
+    path('api/password-reset-confirm/', password_reset_confirm, name='password_reset_confirm'),
+
 
 
 

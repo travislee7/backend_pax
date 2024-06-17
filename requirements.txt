@@ -8,3 +8,4 @@ twilio==9.0.0
 stripe==9.4.0
 exponent_server_sdk==2.1.0
 unoconv==0.9.0
+six==1.16.0

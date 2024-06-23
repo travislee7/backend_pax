@@ -1,6 +1,6 @@
 # bp/urls.py
 from django.urls import path
-from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review, check_pending_reviews, get_coach_reviews, get_unread_player_push_count, mark_player_as_read, get_unread_coach_push_count, mark_coach_as_read, create_unread_push_count, search_coaches, password_reset_request, password_reset_confirm #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
+from .views import UserCreate, UserSignIn, PlayerUserCreate, PlayerUserSignIn, PlayerCategoriesCreate, PlayerCategoriesRead, PlayerCategoriesDelete, UserProfileRead, PlayerProfileRead, UserUpdate, MatchedPlayerCategoriesView, PlayerUserUpdate, generate_token, initiateOrFetchConversation, MediaMessageAPI, savePushToken, send_notification, updateStatus, RetrieveStripeAccount, ManageStripeAccount, CreatePaymentIntentView, log_transaction, get_player_past_lessons, get_coach_past_lessons, pending_review, get_reviews_to_do, submit_review, check_pending_reviews, get_coach_reviews, get_unread_player_push_count, mark_player_as_read, get_unread_coach_push_count, mark_coach_as_read, create_unread_push_count, search_coaches, password_reset_request, password_reset_confirm, checkPushStatus #RefreshStripeOnboarding #bind_user_to_notifications #update_push_configuration
 
 urlpatterns = [
     path('api/user/', UserCreate.as_view(), name='user-create'),
@@ -33,6 +33,7 @@ urlpatterns = [
     #path('api/update-push-config/', update_push_configuration, name='update_push_config'),
 
     #path('api/bind-user/', bind_user_to_notifications, name='bind-user'),
+    path('api/check-push-status/', checkPushStatus, name='check-push-status'),
     path('api/save-push-token/', savePushToken, name='save-token'),
     path('api/send-notification/', send_notification, name='send-notification'),
     path('api/create-unread-push-count/', create_unread_push_count, name='create-unread'),

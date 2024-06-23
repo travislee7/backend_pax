@@ -534,6 +534,27 @@ class MediaMessageAPI(APIView):
         # Return the URL
         return JsonResponse({"url": media_url}, status=201)
     
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def checkPushStatus(request):
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('userId')
+
+        push_status = PushStatus.objects.filter(user_id=user_id).first()
+        if push_status:
+            return JsonResponse({
+                'status': 'exists',
+            }, status=200)
+        else:
+            return JsonResponse({'status': 'not_exists'}, status=200)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def savePushToken(request):

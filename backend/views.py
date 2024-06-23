@@ -553,7 +553,19 @@ def checkPushStatus(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def deletePushToken(request):
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('userId')
 
+        PushStatus.objects.filter(user_id=user_id).delete()
+
+        return JsonResponse({'status': 'success', 'message': 'Push token deleted successfully'}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @csrf_exempt
 @require_http_methods(["POST"])

@@ -911,7 +911,8 @@ class ManageStripeAccount(APIView):
                     refresh_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
                     #refresh_url=f"http://10.0.0.165:8000/api/refresh-stripe/{new_account.id}/",  # This URL should point to your Django server endpoint
                     #return_url=f"https://connect.stripe.com/setup/c/{new_account.id}",
-                    return_url="https://stripe.com/connect",
+                    #return_url="https://stripe.com/connect",
+                    return_url="https://app.performaxxion.com/",
 
                     type="account_onboarding"
                 )
@@ -1240,7 +1241,7 @@ def password_reset_request(request):
 
     return JsonResponse({'error': 'Email not found'}, status=404)'''
 
-@api_view(['POST'])
+'''@api_view(['POST'])
 def password_reset_request(request):
     email = request.data.get('email')
     user_type = request.data.get('user_type')
@@ -1283,7 +1284,51 @@ def password_reset_request(request):
         )
         return JsonResponse({'message': 'Password reset instructions have been sent to your email.'}, status=200)
 
+    return JsonResponse({'error': 'Email not found'}, status=404)'''
+
+@api_view(['POST'])
+def password_reset_request(request):
+    email = request.data.get('email')
+    user_type = request.data.get('user_type')
+    base_url = request.data.get('base_url')
+    
+    if not email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+    if not user_type:
+        return JsonResponse({'error': 'User type is required'}, status=400)
+    if not base_url:
+        return JsonResponse({'error': 'Base URL is required'}, status=400)
+
+    user = User.objects.filter(email=email).first() if user_type == 'coach' else PlayerUser.objects.filter(email=email).first()
+    if user:
+        token = custom_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # Generate the full password reset URL
+        password_reset_url = f"{base_url}reset-password/{user_type}/{uid}/{token}/{email}/"
+
+        # Create the email message directly in the view
+        message = f"""
+        Hi {user.first_name},
+
+        You requested a password reset. Click the link below to reset your password:
+
+        {password_reset_url}
+
+        If you didn't request this, please ignore this email.
+        """
+
+        send_mail(
+            'Password Reset Request',
+            message,
+            'support@performaxxion.com',  # Your Hostinger email address
+            [email],
+            fail_silently=False,
+        )
+        return JsonResponse({'message': 'Password reset instructions have been sent to your email.'}, status=200)
+
     return JsonResponse({'error': 'Email not found'}, status=404)
+
 
 
 @api_view(['POST'])
